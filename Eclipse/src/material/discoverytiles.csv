@@ -1,0 +1,12 @@
+number;type;money;science;material;ship part name;initiative;movement;computer;shield;hull;missile T/F;energy_prod;energy_cons;hits;n_dice
+3;resource;8;0;0;;0;0;0;0;0;False;0;0;0;0
+3;resource;0;5;0;;0;0;0;0;0;False;0;0;0;0
+3;resource;0;0;6;;0;0;0;0;0;False;0;0;0;0
+3;tech;0;0;0;;0;0;0;0;0;False;0;0;0;0
+3;cruiser;0;0;0;;0;0;0;0;0;False;0;0;0;0
+1;ship_part;0;0;0;ancient computer;0;0;3;0;0;False;0;0;0;0
+1;ship_part;0;0;0;ancient source;0;0;0;0;0;False;11;0;0;0
+1;ship_part;0;0;0;ancient hull;0;0;0;0;3;False;0;0;0;0
+1;ship_part;0;0;0;ancient cannon;0;0;0;0;0;False;0;1;1;2
+1;ship_part;0;0;0;ancient shield;0;0;0;-3;0;False;0;2;0;0
+1;ship_part;0;0;0;ancient drive;2;4;0;0;0;False;0;2;0;0
