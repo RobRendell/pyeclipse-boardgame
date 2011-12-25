@@ -187,10 +187,14 @@ class Ship(PersonalComponent):
         """Type may be interceptor, cruiser, dreadnought or starbase"""
         super(Ship, self).__init__(owner)
         self.type = type
+        self.color = owner.color
 
 class InfluenceDisc(PersonalComponent):
     def __init__(self, owner):
         super(InfluenceDisc, self).__init__(owner)
+        self.color = owner.color
 
 class PopulationCube(PersonalComponent):
-    pass
+    def __init__(self, owner):
+        super(PopulationCube, self).__init__(owner)
+        self.color = owner.color

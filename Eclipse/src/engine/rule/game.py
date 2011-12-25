@@ -1,10 +1,12 @@
 import random
-from engine.component import TraitorCard
+from engine.component import TraitorCard, Ship, AmbassadorTile, ColonyShip,\
+    InfluenceDisc, PopulationCube
 from engine.rule.player import Player
-from engine.zone import Bag
+from engine.zone import Bag, PersonalSupply
 from engine.zone import Board
 from engine.zone import DrawPile
 from engine.zone import ShipPartsTilesSupply
+from engine.zone import PlayerBoard
 import material.discoverytiles as dt
 import material.reputationtiles as rt
 import material.sectortiles as st
@@ -57,3 +59,30 @@ class Game(object):
 
         #choose a first player
         self.first_player = random.choice(self.players)
+        self.current_player = self.first_player
+        
+        #assign a personal board, a starting hex and a personal supply to each player
+        for player in self.players:
+            player.personal_board = PlayerBoard(player, self.ship_parts_supply)
+            player.starting_hex = dict([(h.id, h) for h in st.starting_hexes])[player.faction.sector]
+            player.personal_supply = PersonalSupply(player)
+            for dummy in range(8):   
+                player.personal_supply.add(Ship(player, 'interceptor'))
+            for dummy in range(4):
+                player.personal_supply.add(Ship(player, 'cruiser'))
+            for dummy in range(2):
+                player.personal_supply.add(Ship(player, 'dreadnought'))
+            for dummy in range(4):
+                player.personal_supply.add(Ship(player, 'starbase'))
+            for dummy in range(3):
+                player.personal_supply.add(AmbassadorTile(player))
+            for dummy in range(player.faction.colony_ships):
+                player.personal_supply.add(ColonyShip(player))
+            for dummy in range(player.faction.starting_influence):
+                player.personal_board.influence_track.add(InfluenceDisc(player))
+            for resource in ['money', 'science', 'material']:
+                for dummy in range(11):
+                    player.personal_board.population_track.add(resource, PopulationCube(player))
+                   
+    def get_current_round(self):
+        return len(self.rounds)

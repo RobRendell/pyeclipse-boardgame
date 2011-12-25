@@ -95,7 +95,7 @@ class PlayerBoard(Zone):
         self.faction = owner.faction
 
 class BlueprintBoard(Zone):
-    def __init__(self, owner,  ship_parts_supply,):
+    def __init__(self, owner,  ship_parts_supply):
         super(BlueprintBoard, self).__init__(owner)
         s = ship_parts_supply
         self.ship_blueprints_default = {
@@ -164,8 +164,8 @@ class PopulationTrack(Zone):
         else:
             return self.population_track[track].pop()
 
-    def add(self, track):
-        pass
+    def add(self, track, population_cube):
+        self.population_track[track].append(population_cube)
 
     def get_income(self):
         """
@@ -188,6 +188,9 @@ class InfluenceTrack(Zone):
     def __init__(self, owner):
         super(InfluenceTrack, self).__init__(owner)
         self.influence_track = []
+        
+    def add(self, influence_disc):
+        self.influence_track.append(influence_disc)
 
     def get_upkeep(self):
         pass
@@ -261,3 +264,23 @@ class ShipPartsTilesSupply(Zone):
     def get(self, tech_name):
         """Return the technology tile with the specified given name"""
         return self.supply[tech_name]
+    
+class PersonalSupply(Zone):
+    """
+    The personal supply is meant to contain all the components owned by a player
+    that are not yet on the board or on the player board. Components like
+    ambassadors, ships and colony ships are by default in this zone at the start
+    of the game.
+    """
+    def __init__(self, owner):
+        super(PersonalSupply, self).__init__(owner)
+        self.components = []
+        
+    def add(self, component):
+        self.components.append(component)
+        
+    def remove(self, component):
+        self.components.remove(component)
+        
+    def get_content(self):
+        return self.components
