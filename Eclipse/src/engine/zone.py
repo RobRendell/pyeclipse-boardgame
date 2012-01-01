@@ -1,6 +1,5 @@
-from engine.component import AmbassadorTile
-from engine.component import ReputationTile
 import random
+import component as cp
 
 __author__="jglouis"
 __date__ ="$Dec 21, 2011 10:49:19 AM$"
@@ -82,17 +81,6 @@ class Bag(Zone):
 
     def shuffle(self):
         random.shuffle(self.content)
-
-class PlayerBoard(Zone):
-    def __init__(self, owner, ship_parts_supply):
-        super(PlayerBoard, self).__init__(owner)
-        self.blueprints = BlueprintBoard(owner, ship_parts_supply)
-        self.resource_track = ResourceTrack(owner)
-        self.population_track = PopulationTrack(owner)
-        self.population_cemetery = PopulationCemetery(owner)
-        self.influence_track = InfluenceTrack(owner)
-        self.technology_track = TechnologyTrack(owner)
-        self.faction = owner.faction
 
 class BlueprintBoard(Zone):
     def __init__(self, owner,  ship_parts_supply):
@@ -223,16 +211,16 @@ class ReputationTrack(Zone):
         available.
         """
         if len(self.track['reputation']) + len(self.track['diplomacy']) <= 5:
-            if isinstance(component, ReputationTile):
+            if isinstance(component, cp.ReputationTile):
                 if len(self.track['reputation']) < self.reputation_max:
                     self.track['reputation'].append('reputation')
-            elif isinstance(component, AmbassadorTile):
+            elif isinstance(component, cp.AmbassadorTile):
                 if len(self.track['diplomacy']) < self.diplomacy_max:
                     self.track['diplomacy'].append('reputation')
 
     def remove(self, component):
         """Remove a component from the reputation track."""
-        if isinstance(component, AmbassadorTile):
+        if isinstance(component, cp.AmbassadorTile):
             self.track['diplomacy'].remove(component)
         else:
             self.track['reputation'].remove(component)
