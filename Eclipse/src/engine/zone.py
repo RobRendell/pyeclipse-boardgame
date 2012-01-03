@@ -11,8 +11,10 @@ class Zone(object):
         for c in args:
             self.components.add(c)
 
-    def get_content(self):
+    def get_content(self, component_type = None):
         """Return either a list/dict of components or the number of components."""
+        if component_type is not None:
+            return [comp for comp in self.components if isinstance(comp, component_type)]        
         return self.components
     
     def add(self, component):
@@ -67,7 +69,7 @@ class Board(Zone):
     def take(self, component):        
         pass
 
-    def get_content(self, coord = None):
+    def get_content(self, coord = None, comp_type = None):
         """
         If coord is not given, then it returns the whole board dictionary.
         If coord is given, then it returns the content of the corresponding hex.
@@ -75,6 +77,10 @@ class Board(Zone):
         """
         if coord is None:
             return self.hex_grid
+        if comp_type is Sector:
+            return self.hex_grid[coord]
+        if comp_type is not None:
+            return self.hex_grid[coord].get_content(comp_type)
         return [self.hex_grid[coord]] + self.hex_grid[coord].get_content()
     
 class ResourceSlot(Zone):
@@ -89,6 +95,17 @@ class ResourceSlot(Zone):
         """Return True if no population cubes, False otherwise."""
         return not len(self.components)
     
+    def isAllowed(self, player):
+        """check if a player has the technology needed to exploit the slot."""
+        if not self.advanced:
+            return True
+        if self.resource_type == 'money':
+            return player.personal_board.technology_track.contains('advanced economy')
+        if self.resource_type == 'science':
+            return player.personal_board.technology_track.contains('advanced labs')
+        if self.resource_type == 'material':
+            return player.personal_board.technology_track.contains('advanced mining')
+    
 class Sector(Zone):
     """Represents a non-empty hex from the board"""
     def __init__(self, sector_tile):
@@ -97,9 +114,9 @@ class Sector(Zone):
         self.id = sector_tile.id
 
 class DrawPile(Zone):
-    def __init__(self, list):
+    def __init__(self, components):
         super(DrawPile, self).__init__()
-        self.content = list
+        self.content = components
         self.discard_pile = DiscardPile()
         self.shuffle()
         
@@ -136,9 +153,9 @@ class DiscardPile(Zone):
         self.content.append(item)
 
 class Bag(Zone):
-    def __init__(self, list):
+    def __init__(self, components):
         super(Bag, self).__init__()
-        self.content = list
+        self.content = components
         self.shuffle()
 
     def draw(self):
@@ -208,30 +225,22 @@ class ResourceTrack(Zone):
         
 class PopulationTrack(Zone):
     def __init__(self, owner):
-        super(PopulationTrack, self).__init__(owner)
-        self.population_track = {
-            'money':[],
-            'science':[],
-            'material':[]
-        }
-
-    def take(self, track):
-        """Take and remove a population cube from a track."""
-        if len(self.population_track[track]) == 0:
-            return None
-        else:
-            return self.population_track[track].pop()
-
-    def add(self, track, population_cube):
-        self.population_track[track].append(population_cube)
-
-    def get_income(self):
-        """
-        Calculate the income from each population track and return it in a
-        dict.
-        """
-        pass
-
+        #super(PopulationTrack, self).__init__(owner)
+        self.owner = owner
+        self.zones = {}
+        for resource_type in ['money', 'science', 'material']:
+            self.zones[resource_type] = PopulationResourceTrack(owner, resource_type)
+            
+    def add(self, population_cube, resource_type):
+        self.zones[resource_type].add(population_cube)
+        
+    def take(self, resource_type):
+        return self.zones[resource_type].take()
+        
+class PopulationResourceTrack(Zone):
+    def __init__(self, owner, resource_type):
+        super(PopulationResourceTrack, self).__init__(owner)
+        self.resource_type = resource_type
 
 class PopulationCemetery(Zone):
     def __init__(self, owner):
@@ -244,6 +253,7 @@ class PopulationCemetery(Zone):
 
 class InfluenceTrack(Zone):
     pass
+
 class TechnologyTrack(Zone):
     def __init__(self, owner):
         super(TechnologyTrack, self).__init__(owner)
@@ -255,6 +265,13 @@ class TechnologyTrack(Zone):
         starting_technologies = owner.faction.starting_technologies
         for tech in starting_technologies:
             self.technologies[tech.category].append(tech)
+            
+    def contains(self, name):
+        """Return True if the technology track contains the named technology tile, False otherwise"""
+        for techs in self.technologies.values():
+            if name in [t.name for t in techs]:
+                return True
+        return False
 
 class ReputationTrack(Zone):
     def __init__(self, owner):
@@ -290,20 +307,7 @@ class ReputationTrack(Zone):
         return self.track
 
 class ResearchTrack(Zone):
-    def __init__(self):
-        super(ResearchTrack, self).__init__()
-        self.technologies = []
-
-    def add(self, technology_tile):
-        """Add a new technology tile to the track"""
-        self.technologies.append(technology_tile)
-
-    def remove(self, technology_tile):
-        """Remove the technology from the track"""
-        self.technologies.remove(technology_tile)
-
-    def get_content(self):
-        return self.technologies
+    pass
 
 class ShipPartsTilesSupply(Zone):
     def __init__(self, ship_parts):
@@ -317,14 +321,15 @@ class ShipPartsTilesSupply(Zone):
 class PersonalSupply(Zone):
     """
     The personal supply is meant to contain all the components owned by a player
-    that are not yet on the board or on the player board. Components like
+    that are not yet on the board nor on the player board. Components like
     ambassadors, ships and colony ships are by default in this zone at the start
     of the game.
     """
     def take(self, component = None, component_type = None):
-        if component is None:
+        if component is None and component_type is None:
             return self.components.pop()        
         if component_type is not None:
-            component = [comp for comp in self.components if comp.type == component_type][0]
+            #print [comp for comp in self.components if comp.type == component_type]
+            component = [comp for comp in self.components if isinstance(comp, component_type)][0]
         self.components.remove(component)
         return component

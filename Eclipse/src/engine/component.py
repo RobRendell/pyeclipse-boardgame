@@ -170,11 +170,22 @@ class TraitorCard(Component):
         self.owner = owner
 
 class Ship(PersonalComponent):
-    def __init__(self, owner, type):
-        """Type may be interceptor, cruiser, dreadnought or starbase"""
+    def __init__(self, owner):
+        """May be interceptor, cruiser, dreadnought or starbase"""
         super(Ship, self).__init__(owner)
-        self.type = type
         self.color = owner.color
+        
+class Interceptor(Ship):
+    pass
+
+class Cruiser(Ship):
+    pass
+
+class Dreadnought(Ship):
+    pass
+
+class Starbase(Ship):
+    pass
 
 class InfluenceDisc(PersonalComponent):
     def __init__(self, owner):

@@ -62,41 +62,46 @@ class Game(object):
                               
             player.personal_supply = zn.PersonalSupply(player)
             for dummy in range(8):   
-                player.personal_supply.add(cp.Ship(player, 'interceptor'))
+                player.personal_supply.add(cp.Interceptor(player))
             for dummy in range(4):
-                player.personal_supply.add(cp.Ship(player, 'cruiser'))
+                player.personal_supply.add(cp.Cruiser(player))
             for dummy in range(2):
-                player.personal_supply.add(cp.Ship(player, 'dreadnought'))
+                player.personal_supply.add(cp.Dreadnought(player))
             for dummy in range(4):
-                player.personal_supply.add(cp.Ship(player, 'starbase'))
+                player.personal_supply.add(cp.Starbase(player))
             for dummy in range(3):
                 player.personal_supply.add(cp.AmbassadorTile(player))
             for dummy in range(player.faction.colony_ships):
                 player.personal_supply.add(cp.ColonyShip(player))
             for dummy in range(player.faction.starting_influence):
                 player.personal_board.influence_track.add(cp.InfluenceDisc(player))
-            for resource in ['money', 'science', 'material']:
-                for dummy in range(11):
-                    player.personal_board.population_track.add(resource, cp.PopulationCube(player))
+            for dummy in range(11):
+                for resource_type in ['money', 'science', 'material']:
+                    player.personal_board.population_track.add(cp.PopulationCube(player), resource_type)
                     
             #place the starting hexes on the board and populate them with one influence disc,
             #the starting ship, and as many population cubes as needed
             if n_players == 2:
-                coord = ([-2,2][n],[2,-2][n])
+                coord = [(-2,2),(2,-2)][n]
             elif n_players == 3:
-                coord = ([-2,2,0][n],[2,0,-2][n])
+                coord = [(-2,2),(2,0),(0,-2)][n]  
             elif n_players == 4:
-                coord = ([-1,2,1,-2][n],[2,-1,-2,1][n])
+                coord =[(-1,2),(2,-1),(1,-2),(-2,1)][n]
             elif n_players == 5:
-                coord = ([-2,0,2,0,-2][n],[2,2,0,-2,0][n])
+                coord = [(-2,2),(0,2),(2,0),(0,-2),(-2,0)][n]  
             elif n_players == 6:
-                coord = ([-2,0,2,2,0,-2][n],[2,2,0,-2,-2,0][n])                
+                coord = [(-2,2),(0,2),(2,0),(2,-2),(0,-2),(-2,0)][n]              
             self.board.add(coord, player.starting_hex)
             self.board.add(coord, player.personal_board.influence_track.take())
-            self.board.add(coord, player.personal_supply.take(component_type = player.faction.starting_unit))
-            
-        #print self.board.get_content((-1,2))[0].name
+            self.board.add(coord, player.personal_supply.take(
+                                                              component_type = {'interceptor' : cp.Interceptor,
+                                                                                'cruiser' : cp.Cruiser                                                                              
+                                                                                }[player.faction.starting_unit]
+                                                              ))
+            for cube_slot in self.board.get_content(coord, zn.ResourceSlot):
+                if cube_slot.isAllowed(player):
+                    cube_slot.add(player.personal_board.population_track.take(cube_slot.resource_type))
 
-                   
+            
     def get_current_round(self):
         return len(self.rounds)
