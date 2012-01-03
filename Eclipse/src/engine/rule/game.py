@@ -21,7 +21,6 @@ class Game(object):
             rand_faction = random.choice(factions)
             factions = [faction for faction in factions if faction.color != rand_faction.color]
             self.players.append(pl.Player(rand_faction))
-        print [p.faction.color for p in self.players]
 
         #setting the ship part tiles reserver
         self.ship_parts_supply = zn.ShipPartsTilesSupply(sp.ship_parts)
@@ -57,9 +56,10 @@ class Game(object):
         self.current_player = self.first_player
         
         #assign a personal board, a starting hex and a personal supply to each player
-        for player in self.players:
+        for n, player in enumerate(self.players):
             player.personal_board = cp.PlayerBoard(player, self.ship_parts_supply)
             player.starting_hex = dict([(h.id, h) for h in st.starting_hexes])[player.faction.sector]
+                              
             player.personal_supply = zn.PersonalSupply(player)
             for dummy in range(8):   
                 player.personal_supply.add(cp.Ship(player, 'interceptor'))
@@ -78,6 +78,25 @@ class Game(object):
             for resource in ['money', 'science', 'material']:
                 for dummy in range(11):
                     player.personal_board.population_track.add(resource, cp.PopulationCube(player))
+                    
+            #place the starting hexes on the board and populate them with one influence disc,
+            #the starting ship, and as many population cubes as needed
+            if n_players == 2:
+                coord = ([-2,2][n],[2,-2][n])
+            elif n_players == 3:
+                coord = ([-2,2,0][n],[2,0,-2][n])
+            elif n_players == 4:
+                coord = ([-1,2,1,-2][n],[2,-1,-2,1][n])
+            elif n_players == 5:
+                coord = ([-2,0,2,0,-2][n],[2,2,0,-2,0][n])
+            elif n_players == 6:
+                coord = ([-2,0,2,2,0,-2][n],[2,2,0,-2,-2,0][n])                
+            self.board.add(coord, player.starting_hex)
+            self.board.add(coord, player.personal_board.influence_track.take())
+            self.board.add(coord, player.personal_supply.take(component_type = player.faction.starting_unit))
+            
+        #print self.board.get_content((-1,2))[0].name
+
                    
     def get_current_round(self):
         return len(self.rounds)

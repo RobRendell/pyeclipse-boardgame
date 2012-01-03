@@ -5,26 +5,96 @@ __author__="jglouis"
 __date__ ="$Dec 21, 2011 10:49:19 AM$"
 
 class Zone(object):
-    def __init__(self, owner = None):
+    def __init__(self, owner = None, *args):
         self.owner = owner
+        self.components = []
+        for c in args:
+            self.components.add(c)
 
     def get_content(self):
         """Return either a list/dict of components or the number of components."""
-        return None
+        return self.components
+    
+    def add(self, component):
+        """Add a component to the zone."""
+        self.components.append(component)
+        
+    def take(self, component = None):
+        """return a component and remove it from the zone."""
+        if component is None:
+            return self.components.pop()        
+        self.components.remove(component)
+        return component
 
 class Board(Zone):
     def __init__(self, game):
-        super(Board, self).__init__()
-        self.hex_grid = {} #a dictionary coord->tile
+        #super(Board, self).__init__()
+        self.hex_grid = {} #a dictionary coord->Sector
         self.game = game
 
     def add(self, coord, component):
         """Add the specified component to the given coordinates on the board."""
-        self.hex_grid[coord] = component
-        component.when_placed(self.game)
+        if isinstance(component, cp.SectorTile):
+            sector = Sector(component)
+            self.hex_grid[coord] = sector
+            #place discovery tiles
+            if component.discovery:
+                sector.add(self.game.discovery_tiles_draw_pile.draw())
+            #place ancients ships/galactic center
+            if component.n_ancients == -1:
+                sector.add(cp.GalacticCenterDefenseSystem())
+            else:
+                for dummy in range(component.n_ancients):
+                    sector.add(cp.AncientShip())
+            #create resource slots
+            for dummy in range(component.n_money):
+                sector.add(ResourceSlot(resource_type = 'money'))
+            for dummy in range(component.nr_money):
+                sector.add(ResourceSlot(resource_type = 'money', advanced = 'True'))
+            for dummy in range(component.n_science):
+                sector.add(ResourceSlot(resource_type = 'science'))
+            for dummy in range(component.nr_science):
+                sector.add(ResourceSlot(resource_type = 'science', advanced = 'True'))
+            for dummy in range(component.n_material):
+                sector.add(ResourceSlot(resource_type = 'material'))
+            for dummy in range(component.nr_material):
+                sector.add(ResourceSlot(resource_type = 'material', advanced = 'True'))
+            for dummy in range(component.n_wild):
+                sector.add(ResourceSlot())
+        else:
+            self.hex_grid[coord].add(component)
+        
+    def take(self, component):        
+        pass
 
-    def get_content(self):
-        return self.hex_grid
+    def get_content(self, coord = None):
+        """
+        If coord is not given, then it returns the whole board dictionary.
+        If coord is given, then it returns the content of the corresponding hex.
+        The first item of the list is always the sector itself.
+        """
+        if coord is None:
+            return self.hex_grid
+        return [self.hex_grid[coord]] + self.hex_grid[coord].get_content()
+    
+class ResourceSlot(Zone):
+    """A slot for a population cube."""
+    def __init__(self, owner = None, resource_type = None, advanced = False):
+        """If resource type is not given or None, the slot will be wild."""
+        super(ResourceSlot, self).__init__(owner)
+        self.resource_type = resource_type
+        self.advanced = advanced
+        
+    def isEmpty(self):
+        """Return True if no population cubes, False otherwise."""
+        return not len(self.components)
+    
+class Sector(Zone):
+    """Represents a non-empty hex from the board"""
+    def __init__(self, sector_tile):
+        super(Sector, self).__init__(sector_tile)
+        self.name = sector_tile.name
+        self.id = sector_tile.id
 
 class DrawPile(Zone):
     def __init__(self, list):
@@ -173,16 +243,7 @@ class PopulationCemetery(Zone):
         }
 
 class InfluenceTrack(Zone):
-    def __init__(self, owner):
-        super(InfluenceTrack, self).__init__(owner)
-        self.influence_track = []
-        
-    def add(self, influence_disc):
-        self.influence_track.append(influence_disc)
-
-    def get_upkeep(self):
-        pass
-
+    pass
 class TechnologyTrack(Zone):
     def __init__(self, owner):
         super(TechnologyTrack, self).__init__(owner)
@@ -260,15 +321,10 @@ class PersonalSupply(Zone):
     ambassadors, ships and colony ships are by default in this zone at the start
     of the game.
     """
-    def __init__(self, owner):
-        super(PersonalSupply, self).__init__(owner)
-        self.components = []
-        
-    def add(self, component):
-        self.components.append(component)
-        
-    def remove(self, component):
+    def take(self, component = None, component_type = None):
+        if component is None:
+            return self.components.pop()        
+        if component_type is not None:
+            component = [comp for comp in self.components if comp.type == component_type][0]
         self.components.remove(component)
-        
-    def get_content(self):
-        return self.components
+        return component

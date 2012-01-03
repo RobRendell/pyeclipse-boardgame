@@ -47,31 +47,6 @@ class SectorTile(Component):
         self.wormholes = wormholes
         self.components = []
 
-    def add(self, component):
-        """Add a component to the tile."""
-        self.components.append(component)
-
-    def remove(self, component):
-        """Remove a component from the tile."""
-        self.components.remove(component)
-
-    def when_placed(self, game):
-        #place the components indicated on the tile
-        if self.discovery:
-            self.add(game.discovery_tiles_draw_pile.draw())
-        if self.n_ancients == -1:
-            self.add(GalacticCenterDefenseSystem())
-        else:
-            for dummy in range(self.n_ancients):
-                self.add(AncientShip())
-        #create the resource slots
-        self.science_slot = [None for dummy in range(self.n_science)]
-        self.r_science_slot = [None for dummy in range(self.nr_science)]
-        self.money_slot = [None for dummy in range(self.n_money)]
-        self.r_money_slot = [None for dummy in range(self.nr_money)]
-        self.material_slot = [None for dummy in range(self.n_material)]
-        self.r_material_slot = [None for dummy in range(self.nr_material)]
-
 class TechnologyTile(Component):
     """A research tile."""
     def __init__(self, name, cost = None, min_cost = None, category = None, type = None):
