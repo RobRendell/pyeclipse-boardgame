@@ -12,15 +12,25 @@ from cocos.scenes.transitions import FadeTRTransition, FadeBLTransition,\
 from cocos.layer.util_layers import ColorLayer
 from cocos.tiles import HexMapLayer, HexCell
 
-class BoardLayer(Layer):
+class BoardLayer(HexMapLayer):
+    is_event_handler = True
     def __init__(self):
-        super(BoardLayer, self).__init__()
+        super(BoardLayer, self).__init__(1,100,[[HexCell(0, 0, 1000, None, None)]])
         self.add(Label('BoardLayer'))
+        self.set_cell_color(0, 0, (50,50,50))
+        self.set_cell_opacity(0, 0, 255)
         
-class PlayerBoardLayer(HexMapLayer):
+        print self.get_visible_cells()
+        
+    def on_mouse_press (self, x, y, buttons, modifiers):
+        x, y = director.get_virtual_coordinates (x, y)
+        print x,y, self.get_at_pixel(int(x), int(y))
+        
+class PlayerBoardLayer(Layer):
     def __init__(self):
-        super(PlayerBoardLayer, self).__init__(1,1,[HexCell(0,0,2)])
+        super(PlayerBoardLayer, self).__init__()
         self.add(Label('PlayerBoardLayer'))
+        
         
 class ReasearchTrackLayer(Layer):
     def __init__(self):
@@ -53,8 +63,7 @@ class PlayerBoardScene(Scene):
         super(PlayerBoardScene, self).__init__()
         self.add(ColorLayer(200,200,200,255), 0)
         self.add(PlayerBoardLayer(), 1)
-        self.add(control_layer, 2)
-        
+        self.add(control_layer, 2)        
 
 director.init()
 control_layer = ControlLayer()
