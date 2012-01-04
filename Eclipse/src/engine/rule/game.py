@@ -101,7 +101,6 @@ class Game(object):
             for cube_slot in self.board.get_content(coord, zn.ResourceSlot):
                 if cube_slot.isAllowed(player):
                     cube_slot.add(player.personal_board.population_track.take(cube_slot.resource_type))
-
             
     def get_current_round(self):
         return len(self.rounds)
