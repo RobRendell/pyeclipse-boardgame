@@ -10,15 +10,52 @@ from cocos.director import director
 from cocos.scenes.transitions import FadeTRTransition, FadeBLTransition,\
     SlideInBTransition, SlideInTTransition
 from cocos.layer.util_layers import ColorLayer
-from cocos.tiles import HexMapLayer, HexCell
+from cocos.tiles import HexMapLayer, HexCell, Tile, Resource
+from cocos import tiles
+from cocos.draw import Line
+import math
 
 class BoardLayer(HexMapLayer):
     is_event_handler = True
     def __init__(self):
+        #tile = Tile(2, None, 'C:\Users\jglouis\Pictures\space.jpg', None)
         super(BoardLayer, self).__init__(1,100,[[HexCell(0, 0, 1000, None, None)]])
         self.add(Label('BoardLayer'))
         self.set_cell_color(0, 0, (50,50,50))
         self.set_cell_opacity(0, 0, 255)
+        self.set_dirty()
+        
+    def draw(self):    
+        self.add_hex((50,50), 40)
+        self.add_hex((50 + 60 ,50 + 20 * math.sqrt(3)), 40)
+        self.add_hex((50,50 + 40 * math.sqrt(3)), 40)
+        self.add_hex((50 - 60 ,50 + 20 * math.sqrt(3)), 40)
+        
+    def add_hex(self, centre, r):        
+        hex_coord = []
+        hex_centre = centre
+        hex_r = r
+        hex_coord.append((hex_centre[0] + hex_r/2,      hex_centre[1] + math.sqrt(3)*hex_r/2))
+        hex_coord.append((hex_centre[0] + hex_r,        hex_centre[1] + 0))
+        hex_coord.append((hex_centre[0] + hex_r/2,      hex_centre[1] - math.sqrt(3)*hex_r/2))
+        hex_coord.append((hex_centre[0] - hex_r/2,      hex_centre[1] - math.sqrt(3)*hex_r/2))
+        hex_coord.append((hex_centre[0] - hex_r,        hex_centre[1] + 0))
+        hex_coord.append((hex_centre[0] - hex_r/2,      hex_centre[1] + math.sqrt(3)*hex_r/2))
+        
+        w = 3
+        
+        line1 = Line(hex_coord[0], hex_coord[1],(255,255,255,255) , w)
+        line2 = Line(hex_coord[1], hex_coord[2],(255,255,255,255) , w)
+        line3 = Line(hex_coord[2], hex_coord[3],(255,255,255,255) , w)
+        line4 = Line(hex_coord[3], hex_coord[4],(255,255,255,255) , w)
+        line5 = Line(hex_coord[4], hex_coord[5],(255,255,255,255) , w)
+        line6 = Line(hex_coord[5], hex_coord[0],(255,255,255,255) , w)
+        self.add(line1)
+        self.add(line2)
+        self.add(line3)
+        self.add(line4)
+        self.add(line5)
+        self.add(line6)
         
         print self.get_visible_cells()
         
@@ -54,8 +91,9 @@ class ControlLayer(Layer):
 class BoardScene(Scene):
     def __init__(self, control_layer):
         super(BoardScene, self).__init__()
-        self.add(ColorLayer(0,0,0,255), 0)
+        #self.add(ColorLayer(0,0,0,255), 0)
         self.add(BoardLayer(), 1)
+        hex_layer = tiles.load('hexmap.xml')['map0']
         self.add(control_layer, 2)
         
 class PlayerBoardScene(Scene):
@@ -65,7 +103,7 @@ class PlayerBoardScene(Scene):
         self.add(PlayerBoardLayer(), 1)
         self.add(control_layer, 2)        
 
-director.init()
+director.init(resizable = True, width = 800, height = 800)
 control_layer = ControlLayer()
 board_scene = BoardScene(control_layer)
 player_board_scene = PlayerBoardScene(control_layer)
