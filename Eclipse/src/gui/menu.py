@@ -9,6 +9,9 @@ from cocos.director import director
 from cocos.menu import MenuItem, ToggleMenuItem, Menu
 from cocos.scene import Scene
 from cocos.layer.base_layers import MultiplexLayer, Layer
+from cocos.particle import ParticleSystem, Color
+from cocos.euclid import Point2
+import pyglet
 
 class MainMenu(Menu):
     def __init__(self):
@@ -20,6 +23,8 @@ class MainMenu(Menu):
         items.append(MenuItem('Options', self.on_options))
         items.append(MenuItem('About', self.on_about))
         self.create_menu(items)
+        
+        
         
     def on_new_game(self):
         print 'launch game'
@@ -53,9 +58,18 @@ class AboutLayer(Layer):
         
     def on_quit(self):
         self.parent.switch_to(0)
+        
+class BackgroundLayer(Layer):
+    def __init__(self):
+        super(BackgroundLayer, self).__init__()
+        self.img = pyglet.resource.image('eclipse.jpg')
+
+    def draw( self ):
+        self.img.blit(100,0)
     
 director.init(resizable = True)
 scene = Scene()
+scene.add(BackgroundLayer())
 scene.add(MultiplexLayer(
                          MainMenu(),
                          OptionsMenu(),

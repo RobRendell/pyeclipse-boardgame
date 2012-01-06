@@ -14,54 +14,45 @@ from cocos.tiles import HexMapLayer, HexCell, Tile, Resource
 from cocos import tiles
 from cocos.draw import Line
 import math
+from cocos.layer.scrolling import ScrollableLayer, ScrollingManager
+import pyglet
+from cocos.sprite import Sprite
 
-class BoardLayer(HexMapLayer):
+class BoardLayer(ScrollableLayer):
     is_event_handler = True
     def __init__(self):
-        #tile = Tile(2, None, 'C:\Users\jglouis\Pictures\space.jpg', None)
-        super(BoardLayer, self).__init__(1,100,[[HexCell(0, 0, 1000, None, None)]])
+        self.px_width = 5000
+        self.px_height = 5000
+        super(BoardLayer, self).__init__()
         self.add(Label('BoardLayer'))
-        self.set_cell_color(0, 0, (50,50,50))
-        self.set_cell_opacity(0, 0, 255)
-        self.set_dirty()
+        ws = director.get_window_size()
+        self.add(Sprite('milkyway.jpg', scale = 0.1, position = (500,500)))
         
-    def draw(self):    
-        self.add_hex((50,50), 40)
-        self.add_hex((50 + 60 ,50 + 20 * math.sqrt(3)), 40)
-        self.add_hex((50,50 + 40 * math.sqrt(3)), 40)
-        self.add_hex((50 - 60 ,50 + 20 * math.sqrt(3)), 40)
+    def on_mouse_press (self, x, y, buttons, modifiers):        
+        x, y = self.scroller.pixel_from_screen(x,y)
+        #self.scroller.set_focus(x,y)
         
-    def add_hex(self, centre, r):        
-        hex_coord = []
-        hex_centre = centre
-        hex_r = r
-        hex_coord.append((hex_centre[0] + hex_r/2,      hex_centre[1] + math.sqrt(3)*hex_r/2))
-        hex_coord.append((hex_centre[0] + hex_r,        hex_centre[1] + 0))
-        hex_coord.append((hex_centre[0] + hex_r/2,      hex_centre[1] - math.sqrt(3)*hex_r/2))
-        hex_coord.append((hex_centre[0] - hex_r/2,      hex_centre[1] - math.sqrt(3)*hex_r/2))
-        hex_coord.append((hex_centre[0] - hex_r,        hex_centre[1] + 0))
-        hex_coord.append((hex_centre[0] - hex_r/2,      hex_centre[1] + math.sqrt(3)*hex_r/2))
+    def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
+        self.scroller.scale += scroll_y * 0.1
+        self.scroller.scale = min(max(self.scroller.scale, 0.2), 2)
+                
+    def on_key_press(self, key, modifiers):
+        print key,modifiers
         
-        w = 3
+    def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers ):
+        fx, fy = self.scroller.fx, self.scroller.fy
         
-        line1 = Line(hex_coord[0], hex_coord[1],(255,255,255,255) , w)
-        line2 = Line(hex_coord[1], hex_coord[2],(255,255,255,255) , w)
-        line3 = Line(hex_coord[2], hex_coord[3],(255,255,255,255) , w)
-        line4 = Line(hex_coord[3], hex_coord[4],(255,255,255,255) , w)
-        line5 = Line(hex_coord[4], hex_coord[5],(255,255,255,255) , w)
-        line6 = Line(hex_coord[5], hex_coord[0],(255,255,255,255) , w)
-        self.add(line1)
-        self.add(line2)
-        self.add(line3)
-        self.add(line4)
-        self.add(line5)
-        self.add(line6)
+        #transformation needed for autoscale
+        dx, dy = director.get_virtual_coordinates(x + dx, y + dy)
+        x, y = director.get_virtual_coordinates(x, y)
+        dx = dx - x
+        dy = dy - y
+
+        self.scroller.set_focus(fx-dx, fy-dy)
         
-        print self.get_visible_cells()
-        
-    def on_mouse_press (self, x, y, buttons, modifiers):
-        x, y = director.get_virtual_coordinates (x, y)
-        print x,y, self.get_at_pixel(int(x), int(y))
+    def on_enter(self):
+        super(BoardLayer, self).on_enter()
+        self.scroller = self.get_ancestor(ScrollingManager)
         
 class PlayerBoardLayer(Layer):
     def __init__(self):
@@ -91,9 +82,11 @@ class ControlLayer(Layer):
 class BoardScene(Scene):
     def __init__(self, control_layer):
         super(BoardScene, self).__init__()
-        #self.add(ColorLayer(0,0,0,255), 0)
-        self.add(BoardLayer(), 1)
-        hex_layer = tiles.load('hexmap.xml')['map0']
+        self.add(ColorLayer(10,10,10,255), 0)
+        scroller = ScrollingManager()
+        scroller.set_focus(500, 500)
+        scroller.add(BoardLayer())
+        self.add(scroller)
         self.add(control_layer, 2)
         
 class PlayerBoardScene(Scene):
@@ -103,9 +96,9 @@ class PlayerBoardScene(Scene):
         self.add(PlayerBoardLayer(), 1)
         self.add(control_layer, 2)        
 
-director.init(resizable = True, width = 800, height = 800)
+director.init(resizable = True, do_not_scale = False)
 control_layer = ControlLayer()
 board_scene = BoardScene(control_layer)
 player_board_scene = PlayerBoardScene(control_layer)
 control_layer.control_list = [board_scene, player_board_scene]
-director.run(board_scene)        
+director.run(board_scene)
