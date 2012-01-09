@@ -21,42 +21,44 @@ from hexmanager import HexManager
 
 class BoardLayer(ScrollableLayer):
     is_event_handler = True
-    def __init__(self):
+    def __init__(self, scroller):
         self.px_width = 5000
         self.px_height = 5000
         super(BoardLayer, self).__init__()
         self.add(Label('BoardLayer'))
-        ws = director.get_window_size()
-        self.add(Sprite('milkyway.jpg', scale = 0.1, position = (500,500)))
-        
-        self.hex_manager = HexManager(20)
+        self.add(Sprite('milkyway.jpg', scale = 0.5, position = (self.px_width / 2, self.px_height / 2)))
+        self.add(Sprite('planet.gif', scale = 0.5, position = (self.px_width / 2, self.px_height / 2)))
+        self.hex_width = 200
+        self.hex_manager = HexManager(self.hex_width, (self.px_width / 2, self.px_height / 2))
+        self.scroller = scroller
+        self.scroller.set_focus(self.px_width / 2, self.px_height / 2)
         
     def on_mouse_press (self, x, y, buttons, modifiers):        
         x, y = self.scroller.pixel_from_screen(x,y)
-        #self.scroller.set_focus(x,y)
+        hex_u, hex_v = self.hex_manager.get_hex_from_rect_coord(x, y)
+        print 'hex', (hex_u, hex_v)
+        print 'rect', self.scroller.pixel_from_screen(x,y)
         
     def on_mouse_motion(self, x, y, dx, dy):    
         x, y = self.scroller.pixel_from_screen(x,y)
-        print x, y
-        hex = self.hex_manager.get_hex_from_rect_coord(x, y)
-        hex_x, hex_y = self.hex_manager.get_rect_coord_from_hex(hex[0], hex[1])
-        print hex_x, hex_y
+        hex_u, hex_v = self.hex_manager.get_hex_from_rect_coord(x, y)
+        hex_x, hex_y = self.hex_manager.get_rect_coord_from_hex_coord(hex_u, hex_v)
         for child in self.get_children():
             if isinstance(child, Line):
                 child.kill()
-        self.add_hex((hex_x, hex_y), 20)
+        self.add_hex((hex_x, hex_y), self.hex_width / 2)
         
         
     def add_hex(self, centre, r):        
         hex_coord = []
         hex_centre = centre
         hex_r = r
-        hex_coord.append((hex_centre[0] + hex_r/2,      hex_centre[1] + math.sqrt(3)*hex_r/2))
-        hex_coord.append((hex_centre[0] + hex_r,        hex_centre[1] + 0))
-        hex_coord.append((hex_centre[0] + hex_r/2,      hex_centre[1] - math.sqrt(3)*hex_r/2))
-        hex_coord.append((hex_centre[0] - hex_r/2,      hex_centre[1] - math.sqrt(3)*hex_r/2))
-        hex_coord.append((hex_centre[0] - hex_r,        hex_centre[1] + 0))
-        hex_coord.append((hex_centre[0] - hex_r/2,      hex_centre[1] + math.sqrt(3)*hex_r/2))        
+        hex_coord.append((hex_centre[0],                hex_centre[1] + 2 * hex_r / math.sqrt(3)))
+        hex_coord.append((hex_centre[0] + hex_r,        hex_centre[1] + hex_r / math.sqrt(3)))
+        hex_coord.append((hex_centre[0] + hex_r,        hex_centre[1] - hex_r / math.sqrt(3)))
+        hex_coord.append((hex_centre[0],                hex_centre[1] - 2 * hex_r / math.sqrt(3)))
+        hex_coord.append((hex_centre[0] - hex_r,        hex_centre[1] - hex_r / math.sqrt(3)))
+        hex_coord.append((hex_centre[0] - hex_r,        hex_centre[1] + hex_r / math.sqrt(3)))       
         w = 3        
         line1 = Line(hex_coord[0], hex_coord[1],(255,255,255,255) , w)
         line2 = Line(hex_coord[1], hex_coord[2],(255,255,255,255) , w)
@@ -79,14 +81,14 @@ class BoardLayer(ScrollableLayer):
         
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers ):
         fx, fy = self.scroller.fx, self.scroller.fy
-        
-        #transformation needed for autoscale
-        dx, dy = director.get_virtual_coordinates(x + dx, y + dy)
-        x, y = director.get_virtual_coordinates(x, y)
-        dx = dx - x
-        dy = dy - y
-
-        self.scroller.set_focus(fx-dx, fy-dy)
+        xdx, ydy = self.scroller.pixel_from_screen(x + dx, y + dy)
+        x, y = self.scroller.pixel_from_screen(x, y)        
+        dx = xdx - x
+        dy = ydy - y
+        #ws_x, ws_y = director.get_window_size()
+        x_focus = fx - dx
+        y_focus = fy - dy
+        self.scroller.set_focus(x_focus, y_focus)
         
     def on_enter(self):
         super(BoardLayer, self).on_enter()
@@ -120,10 +122,9 @@ class ControlLayer(Layer):
 class BoardScene(Scene):
     def __init__(self, control_layer):
         super(BoardScene, self).__init__()
-        self.add(ColorLayer(10,10,10,255), 0)
+        #self.add(ColorLayer(10,10,10,255), 0)
         scroller = ScrollingManager()
-        scroller.set_focus(500, 500)
-        scroller.add(BoardLayer())
+        scroller.add(BoardLayer(scroller))
         self.add(scroller)
         self.add(control_layer, 2)
         
