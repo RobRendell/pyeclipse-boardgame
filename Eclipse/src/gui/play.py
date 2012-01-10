@@ -27,7 +27,7 @@ class BoardLayer(ScrollableLayer):
         super(BoardLayer, self).__init__()
         self.add(Label('BoardLayer'))
         self.add(Sprite('milkyway.jpg', scale = 0.5, position = (self.px_width / 2, self.px_height / 2)))
-        self.add(Sprite('planet.gif', scale = 0.5, position = (self.px_width / 2, self.px_height / 2)))
+        self.add(Sprite(pyglet.resource.animation('planet.gif'), scale = 0.5, position = (self.px_width / 2, self.px_height / 2)))
         self.hex_width = 200
         self.hex_manager = HexManager(self.hex_width, (self.px_width / 2, self.px_height / 2))
         self.scroller = scroller
@@ -72,6 +72,7 @@ class BoardLayer(ScrollableLayer):
         self.add(line4, 2)
         self.add(line5, 2)
         self.add(line6, 2)   
+        
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
         self.scroller.scale += scroll_y * 0.1
         self.scroller.scale = min(max(self.scroller.scale, 0.2), 2)
@@ -122,7 +123,7 @@ class ControlLayer(Layer):
 class BoardScene(Scene):
     def __init__(self, control_layer):
         super(BoardScene, self).__init__()
-        #self.add(ColorLayer(10,10,10,255), 0)
+        self.add(ColorLayer(0,0,0,255), 0)
         scroller = ScrollingManager()
         scroller.add(BoardLayer(scroller))
         self.add(scroller)
@@ -133,11 +134,16 @@ class PlayerBoardScene(Scene):
         super(PlayerBoardScene, self).__init__()
         self.add(ColorLayer(200,200,200,255), 0)
         self.add(PlayerBoardLayer(), 1)
-        self.add(control_layer, 2)        
-
-director.init(resizable = True, do_not_scale = False)
-control_layer = ControlLayer()
-board_scene = BoardScene(control_layer)
-player_board_scene = PlayerBoardScene(control_layer)
-control_layer.control_list = [board_scene, player_board_scene]
-director.run(board_scene)
+        self.add(control_layer, 2)
+        
+class MainScreen(object):
+    def __init__(self, Game):  
+        director.init(fullscreen = False, resizable = True, do_not_scale = False)
+        self.control_layer = ControlLayer()
+        board_scene = BoardScene(self.control_layer)
+        player_board_scene = PlayerBoardScene(self.control_layer)
+        self.control_layer.control_list = [board_scene, player_board_scene]
+        director.run(board_scene)
+        
+if __name__ == "__main__":
+    MainScreen(None)
