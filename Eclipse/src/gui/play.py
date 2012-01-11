@@ -27,7 +27,7 @@ class BoardLayer(ScrollableLayer):
         self.px_height = 5000
         super(BoardLayer, self).__init__()
         self.add(Label('BoardLayer'))
-        self.add(Sprite('milkyway.jpg', scale = 0.5, position = (self.px_width / 2, self.px_height / 2)))
+        self.add(Sprite(pyglet.resource.image('mkw.jpg'), scale = 2, position = (self.px_width / 2, self.px_height / 2)))
         self.add(Sprite(pyglet.resource.animation('planet.gif'), scale = 0.5, position = (self.px_width / 2, self.px_height / 2)))
         self.hex_width = 200
         self.hex_manager = HexManager(self.hex_width, (self.px_width / 2, self.px_height / 2))

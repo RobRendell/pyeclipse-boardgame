@@ -11,12 +11,14 @@ from cx_Freeze import setup, Executable
  
 # chemins de recherche des modules
 path = sys.path + ["engine", "gui", "material", "tool"]
+
+print path
  
 # options d'inclusion/exclusion des modules
 includes = []
 excludes = []
 packages = []
-includefiles = ['material','gui']
+includefiles = ['src/material','src/gui']
  
 
 binpathincludes = []
@@ -38,7 +40,7 @@ if sys.platform == "win32":
     base = "Win32GUI"
  
 cible_1 = Executable(
-    script = "eclipse.py",
+    script = "src/eclipse.py",
     #base = base,
     compress = False,
     icon = None,
