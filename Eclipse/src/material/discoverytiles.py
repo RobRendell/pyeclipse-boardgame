@@ -26,7 +26,7 @@ def create_discovery_tile(row):
         int(row[15])
     )
 
-reader = csv.reader(open(os.path.dirname(__file__) + '/discoverytiles.csv'), delimiter = ';')
+reader = csv.reader(open(os.path.dirname(__file__) + '\discoverytiles.csv'), delimiter = ';')
 
 #skip the first line
 reader.next()

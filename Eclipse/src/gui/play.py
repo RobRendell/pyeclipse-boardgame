@@ -5,7 +5,7 @@ Created on 4 janv. 2012
 '''
 from cocos.scene import Scene
 from cocos.layer.base_layers import Layer
-from cocos.text import Label
+from cocos.text import Label, RichLabel
 from cocos.director import director
 from cocos.scenes.transitions import FadeTRTransition, FadeBLTransition,\
     SlideInBTransition, SlideInTTransition, FadeUpTransition, FadeDownTransition
@@ -18,10 +18,11 @@ from cocos.layer.scrolling import ScrollableLayer, ScrollingManager
 import pyglet
 from cocos.sprite import Sprite
 from hexmanager import HexManager
+from cocos.actions.interval_actions import Rotate, ScaleTo
 
 class BoardLayer(ScrollableLayer):
     is_event_handler = True
-    def __init__(self, scroller):
+    def __init__(self, scroller, info_layer):
         self.px_width = 5000
         self.px_height = 5000
         super(BoardLayer, self).__init__()
@@ -32,12 +33,14 @@ class BoardLayer(ScrollableLayer):
         self.hex_manager = HexManager(self.hex_width, (self.px_width / 2, self.px_height / 2))
         self.scroller = scroller
         self.scroller.set_focus(self.px_width / 2, self.px_height / 2)
-        
+        self.info_layer = info_layer
+
     def on_mouse_press (self, x, y, buttons, modifiers):        
         x, y = self.scroller.pixel_from_screen(x,y)
         hex_u, hex_v = self.hex_manager.get_hex_from_rect_coord(x, y)
         print 'hex', (hex_u, hex_v)
         print 'rect', self.scroller.pixel_from_screen(x,y)
+        self.info_layer.set_info('test')
         
     def on_mouse_motion(self, x, y, dx, dy):    
         x, y = self.scroller.pixel_from_screen(x,y)
@@ -47,6 +50,7 @@ class BoardLayer(ScrollableLayer):
             if isinstance(child, Line):
                 child.kill()
         self.add_hex((hex_x, hex_y), self.hex_width / 2)
+        #self.add(Line((500,500),(600,500), (255,255,255,255), 3))
         
         
     def add_hex(self, centre, r):        
@@ -119,15 +123,28 @@ class ControlLayer(Layer):
             director.replace(FadeDownTransition(self.control_list[1], duration = 0.2))
         elif key == 98:
             director.replace(FadeUpTransition(self.control_list[0], duration = 0.2))
+            
+class InfoLayer(Layer):
+    def __init__(self):
+        super(InfoLayer, self).__init__()
+        self.text = Label("info", (0, director.get_window_size()[1] - 20))
+        self.add(self.text)
+        
+    def set_info(self, text):
+        self.text.kwargs['text'] = text
+        print text
+        self.text.draw()
         
 class BoardScene(Scene):
     def __init__(self, control_layer):
         super(BoardScene, self).__init__()
         self.add(ColorLayer(0,0,0,255), 0)
-        scroller = ScrollingManager()
-        scroller.add(BoardLayer(scroller))
+        scroller = ScrollingManager()        
+        info_layer = InfoLayer()
+        scroller.add(BoardLayer(scroller, info_layer))
         self.add(scroller)
         self.add(control_layer, 2)
+        self.add(info_layer, 3)
         
 class PlayerBoardScene(Scene):
     def __init__(self, control_layer):
