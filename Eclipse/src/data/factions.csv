@@ -1,0 +1,13 @@
+name;color;explore;research;upgrade;build;move;trade;sector;reputation_diplomacy;reputation_only;diplomacy_only;starting money;starting science;starting material;tech1;tech2;tech3;starting_unit;vp;colony ships;starting_reputation;starting influence;ship_reduction;special
+terran conglomerate;blank;1;1;2;2;3;2;229;4;0;0;2;3;3;starbase;;;interceptor;;3;0;13;0;
+terran republic;yellow;1;1;2;2;3;2;227;4;0;0;2;3;3;starbase;;;interceptor;;3;0;13;0;
+terran federation;blue;1;2;2;2;3;2;223;4;0;0;2;3;3;starbase;;;interceptor;;3;0;13;0;
+terran directorate;red;1;1;2;2;3;2;221;4;0;0;2;3;3;starbase;;;interceptor;;3;0;13;0;
+terran union;green;1;1;2;2;3;2;225;4;0;0;2;3;3;starbase;;;interceptor;;3;0;13;0;
+terran alliance;black;1;1;2;2;3;2;231;4;0;0;2;3;3;starbase;;;interceptor;;3;0;13;0;
+mechanema;blank;1;1;3;3;2;3;230;4;0;0;3;3;3;positron computer;;;interceptor;;3;0;13;-1;
+descendants of draco;yellow;1;1;2;2;2;3;228;4;0;0;2;4;3;;;;interceptor;ancient ship;3;0;13;0;ancient_friend
+hydran progress;blue;1;1;2;2;2;3;224;3;0;1;2;5;2;advanced labs;;;interceptor;;3;0;13;0;
+eridani empire;red;1;1;2;2;2;3;222;4;0;0;26;2;4;plasma cannon;gauss shield;fusion drive;interceptor;;3;2;11;0;
+planta;green;2;1;2;2;2;3;226;3;0;1;4;4;4;starbase;;;interceptor;hex;4;0;13;0;weak_population
+orion hegemony;black;1;1;2;2;2;4;232;4;1;0;3;3;5;neutron bombs;gauss shield;;cruiser;;3;0;13;0;
