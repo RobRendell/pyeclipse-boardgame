@@ -1,9 +1,9 @@
 from engine.component import DiscoveryTile
-import os.path
 import csv
 
 __author__="jglouis"
 __date__ ="$Dec 22, 2011 5:09:31 PM$"
+
 
 discovery_tiles = []
 
@@ -26,7 +26,7 @@ def create_discovery_tile(row):
         int(row[15])
     )
 
-reader = csv.reader(open(os.path.dirname(__file__) + '\discoverytiles.csv'), delimiter = ';')
+reader = csv.reader(open('data\\discoverytiles.csv'), delimiter = ';')
 
 #skip the first line
 reader.next()

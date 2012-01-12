@@ -20,6 +20,14 @@ from cocos.sprite import Sprite
 from hexmanager import HexManager
 from cocos.actions.interval_actions import Rotate, ScaleTo
 
+pyglet.resource.path.append('./image')
+pyglet.resource.path.append('../image')
+pyglet.resource.path.append('./font')
+pyglet.resource.path.append('../font')
+
+pyglet.resource.reindex()
+pyglet.font.add_directory('font')
+
 class BoardLayer(ScrollableLayer):
     is_event_handler = True
     def __init__(self, scroller, info_layer):
@@ -40,7 +48,7 @@ class BoardLayer(ScrollableLayer):
         hex_u, hex_v = self.hex_manager.get_hex_from_rect_coord(x, y)
         print 'hex', (hex_u, hex_v)
         print 'rect', self.scroller.pixel_from_screen(x,y)
-        self.info_layer.set_info('test')
+        self.info_layer.set_info('Coordinates' + str((hex_u, hex_v)))
         
     def on_mouse_motion(self, x, y, dx, dy):    
         x, y = self.scroller.pixel_from_screen(x,y)
@@ -127,13 +135,16 @@ class ControlLayer(Layer):
 class InfoLayer(Layer):
     def __init__(self):
         super(InfoLayer, self).__init__()
-        self.text = Label("info", (0, director.get_window_size()[1] - 20))
-        self.add(self.text)
+        self.info = Label("info", 
+                          (0, director.get_window_size()[1] - 50),
+                          font_name = 'Estrogen',
+                          font_size = 15)
+        self.add(self.info)
         
     def set_info(self, text):
-        self.text.kwargs['text'] = text
+        self.info.element.text = text
         print text
-        self.text.draw()
+        self.draw()
         
 class BoardScene(Scene):
     def __init__(self, control_layer):

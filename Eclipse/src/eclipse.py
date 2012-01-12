@@ -1,6 +1,13 @@
+import sys
+sys.path.append('C:\\Users\\jglouis\\workspace\\Eclipse\\src\\material\\data')
+print sys.path
+
+
 from engine.rule.game import Game
 from gui.play import MainScreen
 import pyglet
+
+
 
 
 __author__="jglouis"

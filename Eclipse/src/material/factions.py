@@ -9,7 +9,7 @@ __date__ ="$Dec 23, 2011 11:33:19 AM$"
 factions = []
 
 def create_starting_technology_tiles(name):
-    reader = csv.reader(open(os.path.dirname(__file__) + '/technologytiles.csv'), delimiter = ';')
+    reader = csv.reader(open('data\\technologytiles.csv'), delimiter = ';')
     for row in reader:
         if row[0] == name:
             return TechnologyTile(
@@ -49,7 +49,7 @@ def create_faction(row):
         row[24]
     )
 
-reader = csv.reader(open(os.path.dirname(__file__) + '/factions.csv'), delimiter = ';')
+reader = csv.reader(open('data\\factions.csv'), delimiter = ';')
 
 #skip the first line
 reader.next()

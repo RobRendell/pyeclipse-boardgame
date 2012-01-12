@@ -23,7 +23,7 @@ def create_ship_part_tile(row):
         int(row[11])
     )
 
-reader = csv.reader(open(os.path.dirname(__file__) + '/shipparts.csv'), delimiter = ';')
+reader = csv.reader(open('data\\shipparts.csv'), delimiter = ';')
 
 #skip the first line
 reader.next()
