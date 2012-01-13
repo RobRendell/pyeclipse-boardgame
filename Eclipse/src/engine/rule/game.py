@@ -82,15 +82,15 @@ class Game(object):
             #place the starting hexes on the board and populate them with one influence disc,
             #the starting ship, and as many population cubes as needed
             if n_players == 2:
-                coord = [(-2,2),(2,-2)][n]
+                coord = [(2,2),(-2,-2)][n]
             elif n_players == 3:
-                coord = [(-2,2),(2,0),(0,-2)][n]  
+                coord = [(2,2),(0,-2),(-2,0)][n]  
             elif n_players == 4:
-                coord =[(-1,2),(2,-1),(1,-2),(-2,1)][n]
+                coord =[(2,2),(0,-2),(-2,-2),(0,2)][n]
             elif n_players == 5:
-                coord = [(-2,2),(0,2),(2,0),(0,-2),(-2,0)][n]  
+                coord = [(2,2),(2,0),(0,-2),(-2,-2),(-2,0)][n]  
             elif n_players == 6:
-                coord = [(-2,2),(0,2),(2,0),(2,-2),(0,-2),(-2,0)][n]              
+                coord = [(2,2),(2,0),(0,-2),(-2,-2),(-2,0),(0,2)][n]              
             self.board.add(coord, player.starting_hex)
             self.board.add(coord, player.personal_board.influence_track.take())
             self.board.add(coord, player.personal_supply.take(

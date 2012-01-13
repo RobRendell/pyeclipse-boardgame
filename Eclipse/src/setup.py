@@ -17,13 +17,13 @@ import sys, os
 
 # Process the includes, excludes and packages first
 
-path = sys.path + ["engine", "gui", "material", "tool", 'data', 'image']
+path = sys.path + ["engine", "gui", "material", "tool", 'data', 'image', 'font']
 includes = []
 excludes = ['_gtkagg', '_tkagg', 'bsddb', 'curses', 'email', 'pywin.debugger',
             'pywin.debugger.dbgcon', 'pywin.dialogs', 'tcl',
             'Tkconstants', 'Tkinter']
 packages = []
-includefiles = ['data','image']
+includefiles = ['data', 'image', 'font']
 path = []
 
 exe = Executable(

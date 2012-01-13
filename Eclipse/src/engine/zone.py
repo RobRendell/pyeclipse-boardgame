@@ -77,6 +77,8 @@ class Board(Zone):
         """
         if coord is None:
             return self.hex_grid
+        if coord not in self.hex_grid:
+            return None
         if comp_type is Sector:
             return self.hex_grid[coord]
         if comp_type is not None:
@@ -112,6 +114,9 @@ class Sector(Zone):
         super(Sector, self).__init__(sector_tile)
         self.name = sector_tile.name
         self.id = sector_tile.id
+        
+    def __str__(self):
+        return 'Sector ' + self.id + ': ' + self.name
 
 class DrawPile(Zone):
     def __init__(self, components):
@@ -142,6 +147,7 @@ class DrawPile(Zone):
 
     def get_content(self):
         return len(self.content)
+        
 
 class DiscardPile(Zone):
     def __init__(self):
