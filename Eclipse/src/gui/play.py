@@ -18,7 +18,7 @@ from hexmanager import HexManager
 from cocos.actions.base_actions import IntervalAction
 import random
 from engine.zone import Sector
-from engine.component import InfluenceDisc
+from engine.component import InfluenceDisc, Ship, Interceptor, Cruiser
 
 pyglet.resource.path.append('./image')
 pyglet.resource.path.append('../image')
@@ -43,8 +43,15 @@ def color_convert(text):
     if text == 'yellow':
         return (255,255,0)
     if text == 'black':
-        return (0,0,0)
+        return (50,50,50)
+    
 
+
+class SelectableSprite(Sprite):
+    def __init__(self, component, *args, **kwargs):
+        super(SelectableSprite, self).__init__(*args, **kwargs)
+        self.component = component
+        
 class BoardLayer(ScrollableLayer):
     is_event_handler = True
     def __init__(self, scroller, info_layer, game):
@@ -52,7 +59,7 @@ class BoardLayer(ScrollableLayer):
         self.px_height = 3000
         super(BoardLayer, self).__init__()
         self.add(Label('BoardLayer'))
-        self.add(Sprite(pyglet.resource.image('mkw.jpg'), scale = 3, position = (self.px_width / 2, self.px_height / 2)))
+        self.add(Sprite(pyglet.resource.image('mkw.jpg'), scale = 3, position = (self.px_width / 2, self.px_height / 2)), -1)
         #self.add(Sprite(pyglet.resource.animation('planet.gif'), scale = 0.5, position = (self.px_width / 2, self.px_height / 2)))
         self.hex_width = 200
         self.hex_manager = HexManager(self.hex_width, (self.px_width / 2, self.px_height / 2))
@@ -65,6 +72,7 @@ class BoardLayer(ScrollableLayer):
             for coord, sector in self.game.board.get_content().iteritems():
                 u, v = coord
                 rect_position = self.hex_manager.get_rect_coord_from_hex_coord(u, v)
+                #hex_color
                 try:
                     color = color_convert(sector.get_content(InfluenceDisc)[0].color)
                 except:
@@ -74,18 +82,36 @@ class BoardLayer(ScrollableLayer):
                                 position = rect_position,
                                 color = color)
                 self.add(hexa)
+                #ships
+                for ship in sector.get_content(Ship):
+                    if isinstance(ship, Interceptor):
+                        ship_picture = 'interceptor.png'
+                    elif isinstance(ship, Cruiser):
+                        ship_picture = 'cruiser.png'
+                    ship_sprite = SelectableSprite(ship,
+                                                   ship_picture,
+                                                   scale = 0.2,
+                                                   position = rect_position,
+                                                   color = color_convert(ship.color))
+                    self.add(ship_sprite)
+                    #ship_sprite.component = ship
 
     def on_mouse_press (self, x, y, buttons, modifiers):        
         x, y = self.scroller.pixel_from_screen(x,y)
         hex_u, hex_v = self.hex_manager.get_hex_from_rect_coord(x, y)
         #self.info_layer.set_info('Coordinates:' + str((hex_u, hex_v)))
+        
+        for child in self.get_children():            
+            if isinstance(child, SelectableSprite):
+                if child.get_AABB().contains(x, y):
+                    print child.component
                 
         if self.game:
             sector = self.game.board.get_content((hex_u, hex_v), Sector)
             if sector is not None:
                 self.info_layer.set_info(str(sector))
             else:
-                self.info_layer.set_info('Unkown Sector')
+                self.info_layer.set_info('Unknown Sector')
         
     def on_mouse_motion(self, x, y, dx, dy):    
         x, y = self.scroller.pixel_from_screen(x,y)
@@ -173,11 +199,13 @@ class InfoLayer(Layer):
     def __init__(self):
         super(InfoLayer, self).__init__()
         self.base_color = (0, 205, 0, 200)
-        self.info = Label("", 
+        self.info = Label('', 
                           (0, director.get_window_size()[1] - 50),
                           font_name = 'Estrogen',
                           font_size = 15,
-                          color = self.base_color)
+                          color = self.base_color,
+                          width = 1000,
+                          multiline = True)
         self.add(self.info)
         
         self.schedule_interval(self.update_time, .1)
@@ -209,7 +237,7 @@ class PlayerBoardScene(Scene):
         
 class MainScreen(object):
     def __init__(self, game):  
-        director.init(fullscreen = True, resizable = True, do_not_scale = False)
+        director.init(fullscreen = False, resizable = True, do_not_scale = False)
         self.control_layer = ControlLayer()
         board_scene = BoardScene(self.control_layer, game)
         player_board_scene = PlayerBoardScene(self.control_layer)
