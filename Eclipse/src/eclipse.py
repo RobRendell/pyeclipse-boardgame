@@ -16,6 +16,6 @@ __date__ ="$Dec 21, 2011 10:34:16 AM$"
 if __name__ == "__main__":
 
     game = Game(6)
-    pyglet.resource.path.append('gui')
-    pyglet.resource.reindex()
+    #pyglet.resource.path.append('gui')
+    #pyglet.resource.reindex()
     MainScreen(game)

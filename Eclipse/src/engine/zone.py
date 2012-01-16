@@ -114,6 +114,7 @@ class Sector(Zone):
         super(Sector, self).__init__(sector_tile)
         self.name = sector_tile.name
         self.id = sector_tile.id
+        self.victory_points = sector_tile.victory_points
         
     def __str__(self):
         return 'Sector ' + self.id + ': ' + self.name

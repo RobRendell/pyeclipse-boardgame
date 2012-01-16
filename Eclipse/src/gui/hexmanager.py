@@ -51,6 +51,23 @@ class HexManager(object):
         y += self.y_offset
         return (x, y)
     
+    def get_planets_coord(self, u, v):
+        """ get the rect coordinates to place planets as a list"""
+        coords = []
+        for n in range(3):
+            su = [0.25, -0.25, 0][n]
+            sv=  [0, -0.25, 0.25][n]
+            su += u
+            sv += v
+            sx, sy = self.get_rect_coord_from_hex_coord(su, sv)
+            coords.append((sx, sy))
+        return coords
+    
+    def get_fleet_coord(self, u, v):
+        """ get the rect coordinate to place ships"""
+        sx, sy = self.get_rect_coord_from_hex_coord(0.25 + u, 0.25 + v)
+        return (sx, sy)
+    
 if __name__ == "__main__":
     hm = HexManager(20.0)
     u, v = hm.get_hex_from_rect_coord(21, 0)

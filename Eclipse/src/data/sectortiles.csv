@@ -36,7 +36,7 @@ hex nr.;sector name;VP;economy;;technology;;materials;;choice;discovery;ancients
 316;Iota Carinae;1;0;0;0;0;0;0;0;1;0;0;3
 317;Beta Crucis;1;1;1;0;0;0;0;0;0;0;0;2
 318;Gamma Velorum;1;0;0;0;0;0;1;1;0;0;0;2
-001;Galactic Center;0;0;0;1;1;1;1;2;1;-1;1;6
+001;Galactic Center;4;0;0;1;1;1;1;2;1;-1;1;6
 221;Procyon / T. Directorate;3;1;1;1;1;1;0;0;0;0;1;4
 223;Altair / T. Federation;3;1;1;1;1;1;0;0;0;0;1;4
 225;Eta Cassiopeiae / T. Union;3;1;1;1;1;1;0;0;0;0;1;4

@@ -17,14 +17,14 @@ from cocos.sprite import Sprite
 from hexmanager import HexManager
 from cocos.actions.base_actions import IntervalAction
 import random
-from engine.zone import Sector
+from engine.zone import Sector, ResourceSlot
 from engine.component import InfluenceDisc, Ship, Interceptor, Cruiser
 
 pyglet.resource.path.append('./image')
 pyglet.resource.path.append('../image')
 pyglet.resource.path.append('./font')
 pyglet.resource.path.append('../font')
-
+pyglet.resource.path.append('./gui')
 pyglet.resource.reindex()
 try:
     pyglet.font.add_directory('font')
@@ -48,9 +48,9 @@ def color_convert(text):
 
 
 class SelectableSprite(Sprite):
-    def __init__(self, component, *args, **kwargs):
+    def __init__(self, obj, *args, **kwargs):
         super(SelectableSprite, self).__init__(*args, **kwargs)
-        self.component = component
+        self.obj = obj
         
 class BoardLayer(ScrollableLayer):
     is_event_handler = True
@@ -88,13 +88,40 @@ class BoardLayer(ScrollableLayer):
                         ship_picture = 'interceptor.png'
                     elif isinstance(ship, Cruiser):
                         ship_picture = 'cruiser.png'
+                    ship_coord = self.hex_manager.get_fleet_coord(u, v)
                     ship_sprite = SelectableSprite(ship,
                                                    ship_picture,
                                                    scale = 0.2,
-                                                   position = rect_position,
-                                                   color = color_convert(ship.color))
-                    self.add(ship_sprite)
-                    #ship_sprite.component = ship
+                                                   position = ship_coord,
+                                                   color = color_convert(ship.color)
+                                                   )
+                    self.add(ship_sprite, z = 2)
+                #planets
+                ordered_slots = [slot for slot in sector.get_content(ResourceSlot)]
+                ordered_slots.sort(key=lambda x: x.resource_type)
+                type_of_planets = set([slot.resource_type for slot in ordered_slots])
+                for rt,scoord in zip(type_of_planets, self.hex_manager.get_planets_coord(u, v)):
+                    color = {None       :(255,255,255),
+                             'money'    :(212,100,4),
+                             'material' :(136,72,41),
+                             'science'  :(230,146,161)
+                             }[rt]
+                    planet_sprite = Sprite('planet.png',
+                                           position = scoord,
+                                           scale = 0.05,
+                                           color = color
+                                           )
+                    self.add(planet_sprite, z = 1)
+                #vp
+                vp = sector.victory_points
+                vp_picture = {1 :'reputation1.png',
+                              2 :'reputation2.png',
+                              3 :'reputation3.png',
+                              4 :'reputation4.png'}[vp]
+                vp_sprite = Sprite(vp_picture,
+                                   position = rect_position,
+                                   scale = 0.2)
+                self.add(vp_sprite, z = 1)
 
     def on_mouse_press (self, x, y, buttons, modifiers):        
         x, y = self.scroller.pixel_from_screen(x,y)
@@ -104,7 +131,7 @@ class BoardLayer(ScrollableLayer):
         for child in self.get_children():            
             if isinstance(child, SelectableSprite):
                 if child.get_AABB().contains(x, y):
-                    print child.component
+                    print child.obj
                 
         if self.game:
             sector = self.game.board.get_content((hex_u, hex_v), Sector)
@@ -237,7 +264,7 @@ class PlayerBoardScene(Scene):
         
 class MainScreen(object):
     def __init__(self, game):  
-        director.init(fullscreen = False, resizable = True, do_not_scale = False)
+        director.init(fullscreen = True, resizable = True, do_not_scale = False)
         self.control_layer = ControlLayer()
         board_scene = BoardScene(self.control_layer, game)
         player_board_scene = PlayerBoardScene(self.control_layer)
