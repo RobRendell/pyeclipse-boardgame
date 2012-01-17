@@ -59,7 +59,7 @@ class BoardLayer(ScrollableLayer):
         self.px_height = 3000
         super(BoardLayer, self).__init__()
         self.add(Label('BoardLayer'))
-        self.add(Sprite(pyglet.resource.image('mkw.jpg'), scale = 3, position = (self.px_width / 2, self.px_height / 2)), -1)
+        #self.add(Sprite(pyglet.resource.image('mkw.jpg'), scale = 3, position = (self.px_width / 2, self.px_height / 2)), -1)
         #self.add(Sprite(pyglet.resource.animation('planet.gif'), scale = 0.5, position = (self.px_width / 2, self.px_height / 2)))
         self.hex_width = 200
         self.hex_manager = HexManager(self.hex_width, (self.px_width / 2, self.px_height / 2))
@@ -188,7 +188,6 @@ class BoardLayer(ScrollableLayer):
         x, y = self.scroller.pixel_from_screen(x, y)        
         dx = xdx - x
         dy = ydy - y
-        #ws_x, ws_y = director.get_window_size()
         x_focus = fx - dx
         y_focus = fy - dy
         self.scroller.set_focus(x_focus, y_focus)
@@ -206,10 +205,6 @@ class PlayerBoardLayer(Layer):
 class ReasearchTrackLayer(Layer):
     def __init__(self):
         super(ReasearchTrackLayer, self).__init__()
-        
-class ActionLayer(Layer):
-    def __init__(self):
-        super(ActionLayer, self).__init__()
         
 class ControlLayer(Layer):
     is_event_handler = True    
@@ -244,16 +239,24 @@ class InfoLayer(Layer):
     def set_info(self, text):
         self.info.do(InfoAction(text, '_', 0.4))
         
+class ActionLayer(Layer):
+    def __init__(self, faction):
+        super(ActionLayer, self).__init__()
+        action_board_sprite = Sprite('action_board_terran.png')
+        self.add(action_board_sprite)        
+        
 class BoardScene(Scene):
     def __init__(self, control_layer, game):
         super(BoardScene, self).__init__()
         self.add(ColorLayer(0,0,0,255), 0)
         scroller = ScrollingManager()        
         info_layer = InfoLayer()
+        action_layer = ActionLayer(None)
         scroller.add(BoardLayer(scroller, info_layer, game))
         self.add(scroller)
         self.add(control_layer, 2)
         self.add(info_layer, 3)
+        self.add(action_layer, 4)
         
 class PlayerBoardScene(Scene):
     def __init__(self, control_layer):
