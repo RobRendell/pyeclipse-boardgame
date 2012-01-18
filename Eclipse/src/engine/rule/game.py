@@ -12,8 +12,21 @@ import material.factions as fa
 __author__="jglouis"
 __date__ ="$Dec 22, 2011 5:56:29 PM$"
 
-class Game(object):
+class GameSlice(object):
+    def __init__(self, game_slices = [], *args):
+        self.sub_slices = game_slices + list(args)
+        self.slice_iterator = iter(self.sub_slices)
+
+    def do(self):
+        """Execute the current slice. Return True if the slice is finished."""
+        try:
+            self.slice_iterator.next().do()
+        except:
+            return True
+
+class Game(GameSlice):
     def __init__(self, n_players):
+        super(Game, self).__init__([Round() for n in range(1,10)])
         #creating the players
         factions = fa.factions
         self.players = []
@@ -24,9 +37,6 @@ class Game(object):
 
         #setting the ship part tiles reserver
         self.ship_parts_supply = zn.ShipPartsTilesSupply(sp.ship_parts)
-
-        #game log
-        self.rounds = []
 
         #create the bag of technology tiles
         self.technology_tiles_bag = zn.Bag(tt.technology_tiles)
@@ -104,3 +114,41 @@ class Game(object):
             
     def get_current_round(self):
         return len(self.rounds)
+        
+class Round(GameSlice):
+    def __init__(self):
+        super(Round, self).__init__(ActionPhase(),
+                                    CombatPhase(),
+                                    UpkeepPhase(),
+                                    CleanupPhase()
+                                    )
+        
+    def do(self):
+        
+        super(Round, self).do()
+        
+class Phase(GameSlice):
+    pass
+    
+class ActionPhase(Phase):
+    pass
+
+class CombatPhase(Phase):
+    pass
+
+class UpkeepPhase(Phase):
+    pass
+
+class CleanupPhase(Phase):
+    pass
+        
+class Step(GameSlice):
+    """represents the smallest game slice division."""
+    def __init__(self, action):
+        """action may be an Action, Reaction, FreeAction, ForcedAction or GameAction"""
+        super(Step, self).__init__()
+        self.action = action
+    
+    def do(self):
+        self.action.do()
+        return True
