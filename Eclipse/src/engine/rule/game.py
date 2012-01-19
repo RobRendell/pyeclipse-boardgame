@@ -13,9 +13,13 @@ __author__="jglouis"
 __date__ ="$Dec 22, 2011 5:56:29 PM$"
 
 class GameSlice(object):
-    def __init__(self, game_slices = [], *args):
-        self.sub_slices = game_slices + list(args)
+    def __init__(self, game = None, sub_slices = []):
+        self.sub_slices = sub_slices
         self.slice_iterator = iter(self.sub_slices)
+        if game is None:
+            self.game = self
+        else:
+            self.game = game
 
     def do(self):
         """Execute the current slice. Return True if the slice is finished."""
@@ -26,7 +30,7 @@ class GameSlice(object):
 
 class Game(GameSlice):
     def __init__(self, n_players):
-        super(Game, self).__init__([Round() for n in range(1,10)])
+        super(Game, self).__init__([Round(self) for n in range(1,10)])
         #creating the players
         factions = fa.factions
         self.players = []
@@ -116,22 +120,25 @@ class Game(GameSlice):
         return len(self.rounds)
         
 class Round(GameSlice):
-    def __init__(self):
-        super(Round, self).__init__(ActionPhase(),
-                                    CombatPhase(),
-                                    UpkeepPhase(),
-                                    CleanupPhase()
-                                    )
+    def __init__(self, game):
+        super(Round, self).__init__(game,
+                                    [ActionPhase(game),
+                                    CombatPhase(game),
+                                    UpkeepPhase(game),
+                                    CleanupPhase(game)
+                                    ])
         
-    def do(self):
-        
+    def do(self):        
         super(Round, self).do()
         
 class Phase(GameSlice):
     pass
     
 class ActionPhase(Phase):
-    pass
+    def __init__(self, game):
+        super(ActionPhase, self).__init__(game,
+                                          [Decision()
+                                           ])
 
 class CombatPhase(Phase):
     pass
@@ -144,11 +151,12 @@ class CleanupPhase(Phase):
         
 class Step(GameSlice):
     """represents the smallest game slice division."""
-    def __init__(self, action):
-        """action may be an Action, Reaction, FreeAction, ForcedAction or GameAction"""
-        super(Step, self).__init__()
-        self.action = action
+    pass
     
+class Decision(Step):
+    """represents a decision to be made by te player."""
+    def __init__(self, game, player):
+        super(Decision, self).__init__(game)
+        self.player = player
+        
     def do(self):
-        self.action.do()
-        return True

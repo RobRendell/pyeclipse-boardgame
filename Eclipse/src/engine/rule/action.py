@@ -3,8 +3,6 @@ Created on 31 déc. 2011
 
 @author: jglouis
 '''
-import engine.zone as zn
-import engine.component as cp
 
 class Action(object):
     """
@@ -14,13 +12,43 @@ class Action(object):
     def __init__(self, **kwargs):
         for key, value in kwargs:
             self.arg[key] = value
+            
     def do(self):
         """
         do is the method to call to perform the action.
         """
         pass
+    
+class TurnAction(Action):
+    pass
 
-class Explore(Action):
+class Reaction(Action):
+    pass
+
+class FreeAction(Action):
+    pass
+
+class DiplomatAction(FreeAction):
+    def do(self):
+        pass
+    
+class ColonizeAction(FreeAction):
+    def do(self):
+        pass
+
+class ReactionUpgrade(Reaction):
+    def do(self):
+        pass
+    
+class ReactionBuild(Reaction):
+    def do(self):
+        pass
+    
+class ReactionMove(Reaction):
+    def do(self):
+        pass
+
+class Explore(TurnAction):
     """
     take a tuple as an argument representing the coordinates for
     the sector to explore.
@@ -29,18 +57,22 @@ class Explore(Action):
         #check if the sector is allowed for exploration
         pass
     
-class Influence(Action):
+class Influence(TurnAction):
     def do(self):
         pass
         
-class Research(Action):
+class Research(TurnAction):
     def do(self):
         pass
     
-class Upgrade(Action):
+class Upgrade(TurnAction):
+    def do(self):
+        pass
+    
+class Build(TurnAction):
     def do(self):
         pass
 
-class Move(Action):
+class Move(TurnAction):
     def do(self):
         pass
