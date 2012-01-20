@@ -18,23 +18,9 @@ class Action(object):
         do is the method to call to perform the action.
         """
         pass
-    
-class TurnAction(Action):
-    pass
 
 class Reaction(Action):
     pass
-
-class FreeAction(Action):
-    pass
-
-class DiplomatAction(FreeAction):
-    def do(self):
-        pass
-    
-class ColonizeAction(FreeAction):
-    def do(self):
-        pass
 
 class ReactionUpgrade(Reaction):
     def do(self):
@@ -48,7 +34,7 @@ class ReactionMove(Reaction):
     def do(self):
         pass
 
-class Explore(TurnAction):
+class Explore(Action):
     """
     take a tuple as an argument representing the coordinates for
     the sector to explore.
@@ -57,22 +43,22 @@ class Explore(TurnAction):
         #check if the sector is allowed for exploration
         pass
     
-class Influence(TurnAction):
+class Influence(Action):
     def do(self):
         pass
         
-class Research(TurnAction):
+class Research(Action):
     def do(self):
         pass
     
-class Upgrade(TurnAction):
+class Upgrade(Action):
     def do(self):
         pass
     
-class Build(TurnAction):
+class Build(Action):
     def do(self):
         pass
 
-class Move(TurnAction):
+class Move(Action):
     def do(self):
         pass

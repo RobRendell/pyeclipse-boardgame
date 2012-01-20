@@ -27,6 +27,10 @@ class GameSlice(object):
             self.slice_iterator.next().do()
         except:
             return True
+        
+    def add(self, sub_slices = []):
+        """add sub slices to the game slice"""
+        self.sub_slices.extend(sub_slices)
 
 class Game(GameSlice):
     def __init__(self, n_players):
@@ -128,18 +132,28 @@ class Round(GameSlice):
                                     CleanupPhase(game)
                                     ])
         
-    def do(self):        
-        super(Round, self).do()
-        
 class Phase(GameSlice):
     pass
     
 class ActionPhase(Phase):
     def __init__(self, game):
-        super(ActionPhase, self).__init__(game,
-                                          [Decision()
-                                           ])
-
+        #ordered list of players beginning with the first player
+        first_player_index = game.players.index(game.first_player)
+        ordered_players = game.players[first_player_index:] + game.players[:first_player_index]
+        
+        super(ActionPhase, self).__init__(game, [Turn(self.game.first_player)])
+    
+    def do(self):
+        try:
+            self.slice_iterator.next().do()
+        except:
+            pass
+            
+class Turn(GameSlice):
+    def __init__(self, game, player):
+        super(Turn, self).__init__(game)
+        self.player = player
+        
 class CombatPhase(Phase):
     pass
 
@@ -148,15 +162,3 @@ class UpkeepPhase(Phase):
 
 class CleanupPhase(Phase):
     pass
-        
-class Step(GameSlice):
-    """represents the smallest game slice division."""
-    pass
-    
-class Decision(Step):
-    """represents a decision to be made by te player."""
-    def __init__(self, game, player):
-        super(Decision, self).__init__(game)
-        self.player = player
-        
-    def do(self):
