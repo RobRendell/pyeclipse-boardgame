@@ -12,29 +12,8 @@ import material.factions as fa
 __author__="jglouis"
 __date__ ="$Dec 22, 2011 5:56:29 PM$"
 
-class GameSlice(object):
-    def __init__(self, game = None, sub_slices = []):
-        self.sub_slices = sub_slices
-        self.slice_iterator = iter(self.sub_slices)
-        if game is None:
-            self.game = self
-        else:
-            self.game = game
-
-    def do(self):
-        """Execute the current slice. Return True if the slice is finished."""
-        try:
-            self.slice_iterator.next().do()
-        except:
-            return True
-        
-    def add(self, sub_slices = []):
-        """add sub slices to the game slice"""
-        self.sub_slices.extend(sub_slices)
-
-class Game(GameSlice):
+class Game(object):
     def __init__(self, n_players):
-        super(Game, self).__init__([Round(self) for n in range(1,10)])
         #creating the players
         factions = fa.factions
         self.players = []
@@ -119,41 +98,50 @@ class Game(GameSlice):
             for cube_slot in self.board.get_content(coord, zn.ResourceSlot):
                 if cube_slot.isAllowed(player):
                     cube_slot.add(player.personal_board.population_track.take(cube_slot.resource_type))
+                    
+            #test
+            coord = (0,1)
+            self.draw_hex(coord)
             
     def get_current_round(self):
         return len(self.rounds)
+    
+    def move(self, component, destination , zone_from = None, zone_to = None):
+        """
+        Move a component (influence disc, ships, hex, population cube). Destination
+        is hex coordinates (tuple)
+        """
+        if zone_from is None:
+            zone_from = self.board
+        if zone_to is None:
+            zone_to = self.board
+        self.zone_from.take(component)
+        self.zone_to.add(destination, component)
         
-class Round(GameSlice):
-    def __init__(self, game):
-        super(Round, self).__init__(game,
-                                    [ActionPhase(game),
-                                    CombatPhase(game),
-                                    UpkeepPhase(game),
-                                    CleanupPhase(game)
-                                    ])
+    def draw_hex(self, coord):
+        """
+        Method called when a player is exploring. Return a SectorTile object
+        from the draw pile corresponding to the coordinates. Return None
+        if the draw pile was empty."""
+        draw_pile_number = max(max(coord), 3)
+        draw_pile = [self.inner_sectors_drawpile,
+                     self.middle_sectors_drawpile,
+                     self.outer_sectors_drawpile
+                     ][draw_pile_number - 1]
+        return draw_pile.draw()
+    
+    def place_hex(self, sector_tile, coord):
+        """
+        Place a SectorTile on the board.
+        """
+        self.board.add(coord, sector_tile)    
         
-class Phase(GameSlice):
+class Phase(object):
     pass
     
 class ActionPhase(Phase):
-    def __init__(self, game):
-        #ordered list of players beginning with the first player
-        first_player_index = game.players.index(game.first_player)
-        ordered_players = game.players[first_player_index:] + game.players[:first_player_index]
-        
-        super(ActionPhase, self).__init__(game, [Turn(self.game.first_player)])
-    
-    def do(self):
-        try:
-            self.slice_iterator.next().do()
-        except:
-            pass
-            
-class Turn(GameSlice):
-    def __init__(self, game, player):
-        super(Turn, self).__init__(game)
-        self.player = player
-        
+    pass
+
 class CombatPhase(Phase):
     pass
 

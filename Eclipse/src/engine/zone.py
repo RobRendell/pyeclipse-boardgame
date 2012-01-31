@@ -136,7 +136,7 @@ class DrawPile(Zone):
         except:
             print 'unable to draw'
             return None
-        #rehuffle the discard pile to create a new drawpile if the last item was drawn
+        #re-shuffle the discard pile to create a new drawpile if the last item was drawn
         if len(self.content) == 0 and len(self.discard_pile.content) != 0:
             self.content.extend(self.discard_pile.content)
             self.discard_pile.content = []

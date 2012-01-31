@@ -267,7 +267,7 @@ class PlayerBoardScene(Scene):
         
 class MainScreen(object):
     def __init__(self, game):  
-        director.init(fullscreen = True, resizable = True, do_not_scale = False)
+        director.init(fullscreen = False, resizable = True, do_not_scale = False)
         self.control_layer = ControlLayer()
         board_scene = BoardScene(self.control_layer, game)
         player_board_scene = PlayerBoardScene(self.control_layer)
