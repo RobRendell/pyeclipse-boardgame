@@ -47,7 +47,16 @@ class Game(object):
         self.inner_sectors_drawpile = zn.DrawPile(st.inner_hexes)
         self.middle_sectors_drawpile = zn.DrawPile(st.middle_hexes)
         self.outer_sectors_drawpile = zn.DrawPile(st.outer_hexes)
-
+        
+        #...then remove the adequate number of sector form the outer draw pile
+        n = {2 : 13,
+             3 : 8,
+             4 : 4,
+             5 : 2,
+             6 : 0}[n_players]
+        for dummy in range(n):
+            self.outer_sectors_drawpile.draw()
+        
         #choose a first player
         self.first_player = random.choice(self.players)
         self.current_player = self.first_player
@@ -98,10 +107,7 @@ class Game(object):
             for cube_slot in self.board.get_content(coord, zn.ResourceSlot):
                 if cube_slot.isAllowed(player):
                     cube_slot.add(player.personal_board.population_track.take(cube_slot.resource_type))
-                    
-            #test
-            coord = (0,1)
-            self.draw_hex(coord)
+
             
     def get_current_round(self):
         return len(self.rounds)
@@ -123,7 +129,20 @@ class Game(object):
         Method called when a player is exploring. Return a SectorTile object
         from the draw pile corresponding to the coordinates. Return None
         if the draw pile was empty."""
-        draw_pile_number = max(max(coord), 3)
+        abs_coord = (abs(coord[0]),abs(coord[1]))
+        draw_pile_number = min(max(abs_coord), 3)
+        #with the coordinate system, there are some exceptions to the simple formula above
+        if (coord == (-1,1)
+        or coord == (1,-1)
+        or coord == (-2,1)
+        or coord == (-1,2)
+        or coord == (2,-1)
+        or coord == (1,-2)
+        or coord == (-2,2)
+        or coord == (2,-2)):
+            draw_pile_number += 1
+
+
         draw_pile = [self.inner_sectors_drawpile,
                      self.middle_sectors_drawpile,
                      self.outer_sectors_drawpile

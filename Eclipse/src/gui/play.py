@@ -19,6 +19,7 @@ from cocos.actions.base_actions import IntervalAction
 import random
 from engine.zone import Sector, ResourceSlot
 from engine.component import InfluenceDisc, Ship, Interceptor, Cruiser
+from pyglet.window.mouse import LEFT, RIGHT
 
 pyglet.resource.path.append('./image')
 pyglet.resource.path.append('../image')
@@ -55,8 +56,8 @@ class SelectableSprite(Sprite):
 class BoardLayer(ScrollableLayer):
     is_event_handler = True
     def __init__(self, scroller, info_layer, game):
-        self.px_width = 3000
-        self.px_height = 3000
+        self.px_width = 6000
+        self.px_height = 6000
         super(BoardLayer, self).__init__()
         self.add(Label('BoardLayer'))
         #self.add(Sprite(pyglet.resource.image('mkw.jpg'), scale = 3, position = (self.px_width / 2, self.px_height / 2)), -1)
@@ -70,75 +71,99 @@ class BoardLayer(ScrollableLayer):
 
         if self.game:
             for coord, sector in self.game.board.get_content().iteritems():
-                u, v = coord
-                rect_position = self.hex_manager.get_rect_coord_from_hex_coord(u, v)
-                #hex_color
-                try:
-                    color = color_convert(sector.get_content(InfluenceDisc)[0].color)
-                except:
-                    color = (150,150,150)
-                hexa = Sprite('infhexa.png', 
-                                scale = 0.85,
-                                position = rect_position,
-                                color = color)
-                self.add(hexa)
-                #ships
-                for ship in sector.get_content(Ship):
-                    if isinstance(ship, Interceptor):
-                        ship_picture = 'interceptor.png'
-                    elif isinstance(ship, Cruiser):
-                        ship_picture = 'cruiser.png'
-                    ship_coord = self.hex_manager.get_fleet_coord(u, v)
-                    ship_sprite = SelectableSprite(ship,
-                                                   ship_picture,
-                                                   scale = 0.2,
-                                                   position = ship_coord,
-                                                   color = color_convert(ship.color)
-                                                   )
-                    self.add(ship_sprite, z = 2)
-                #planets
-                ordered_slots = [slot for slot in sector.get_content(ResourceSlot)]
-                ordered_slots.sort(key=lambda x: x.resource_type)
-                type_of_planets = set([slot.resource_type for slot in ordered_slots])
-                for rt,scoord in zip(type_of_planets, self.hex_manager.get_planets_coord(u, v)):
-                    color = {None       :(255,255,255),
-                             'money'    :(212,100,4),
-                             'material' :(136,72,41),
-                             'science'  :(230,146,161)
-                             }[rt]
-                    planet_sprite = Sprite('planet.png',
-                                           position = scoord,
-                                           scale = 0.05,
-                                           color = color
+                self.display_sector(coord)
+                
+    def display_sector(self, coord):
+        u, v = coord
+        sector = self.game.board.get_content()[coord]
+        print sector
+        rect_position = self.hex_manager.get_rect_coord_from_hex_coord(u, v)
+        #hex_color
+        try:
+            color = color_convert(sector.get_content(InfluenceDisc)[0].color)
+        except:
+            color = (150,150,150)
+        hexa = Sprite('infhexa.png', 
+                        scale = 0.85,
+                        position = rect_position,
+                        color = color)
+        self.add(hexa)
+        #ships
+        for ship in sector.get_content(Ship):
+            if isinstance(ship, Interceptor):
+                ship_picture = 'interceptor.png'
+            elif isinstance(ship, Cruiser):
+                ship_picture = 'cruiser.png'
+            ship_coord = self.hex_manager.get_fleet_coord(u, v)
+            ship_sprite = SelectableSprite(ship,
+                                           ship_picture,
+                                           scale = 0.2,
+                                           position = ship_coord,
+                                           color = color_convert(ship.color)
                                            )
-                    self.add(planet_sprite, z = 1)
-                #vp
-                vp = sector.victory_points
-                vp_picture = {1 :'reputation1.png',
-                              2 :'reputation2.png',
-                              3 :'reputation3.png',
-                              4 :'reputation4.png'}[vp]
-                vp_sprite = Sprite(vp_picture,
-                                   position = rect_position,
-                                   scale = 0.2)
-                self.add(vp_sprite, z = 1)
+            self.add(ship_sprite, z = 2)
+        #planets
+        ordered_slots = [slot for slot in sector.get_content(ResourceSlot)]
+        ordered_slots.sort(key=lambda x: x.resource_type)
+        type_of_planets = set([slot.resource_type for slot in ordered_slots])
+        for rt,scoord in zip(type_of_planets, self.hex_manager.get_planets_coord(u, v)):
+            color = {None       :(255,255,255),
+                     'money'    :(212,100,4),
+                     'material' :(136,72,41),
+                     'science'  :(230,146,161)
+                     }[rt]
+            planet_sprite = Sprite('planet.png',
+                                   position = scoord,
+                                   scale = 0.05,
+                                   color = color
+                                   )
+            self.add(planet_sprite, z = 1)
+        #vp
+        vp = sector.victory_points
+        vp_picture = {1 :'reputation1.png',
+                      2 :'reputation2.png',
+                      3 :'reputation3.png',
+                      4 :'reputation4.png'}[vp]
+        vp_sprite = Sprite(vp_picture,
+                           position = rect_position,
+                           scale = 0.2)
+        self.add(vp_sprite, z = 1)
 
-    def on_mouse_press (self, x, y, buttons, modifiers):        
+    def on_mouse_press (self, x, y, button, modifiers):        
         x, y = self.scroller.pixel_from_screen(x,y)
         hex_u, hex_v = self.hex_manager.get_hex_from_rect_coord(x, y)
-        #self.info_layer.set_info('Coordinates:' + str((hex_u, hex_v)))
+        coord = (hex_u, hex_v)
         
         for child in self.get_children():            
             if isinstance(child, SelectableSprite):
                 if child.get_AABB().contains(x, y):
                     print child.obj
                 
-        if self.game:
-            sector = self.game.board.get_content((hex_u, hex_v), Sector)
-            if sector is not None:
+        if self.game:          
+            
+            
+            sector = self.game.board.get_content(coord, Sector)
+            
+            #explore the sector if right click and sector empty
+            if button == RIGHT:   
+                if sector is None:    
+                    sector_tile = self.game.draw_hex(coord)
+                    if sector_tile is not None:
+                        self.game.place_hex(sector_tile, coord)
+                        self.info_layer.set_info('New Sector discovered: ' + sector_tile.name)
+                        self.display_sector(coord)
+                    else:
+                        self.info_layer.set_info('No New Sector to explore -Aborting')
+                else:
+                    self.info_layer.set_info('Sector already explored -Aborting-')           
+            
+            
+            elif sector is not None:
                 self.info_layer.set_info(str(sector))
             else:
                 self.info_layer.set_info('Unknown Sector')
+                
+
         
     def on_mouse_motion(self, x, y, dx, dy):    
         x, y = self.scroller.pixel_from_screen(x,y)
@@ -243,7 +268,10 @@ class ActionLayer(Layer):
     def __init__(self, faction):
         super(ActionLayer, self).__init__()
         action_board_sprite = Sprite('action_board_terran.png')
-        self.add(action_board_sprite)        
+        action_board_sprite.transform_anchor = (1,100000)
+        self.add(action_board_sprite)
+        action_board_sprite.position = action_board_sprite.get_AABB().topleft
+        action_board_sprite.x += director.get_window_size()[0]
         
 class BoardScene(Scene):
     def __init__(self, control_layer, game):
@@ -267,7 +295,7 @@ class PlayerBoardScene(Scene):
         
 class MainScreen(object):
     def __init__(self, game):  
-        director.init(fullscreen = False, resizable = True, do_not_scale = False)
+        director.init(fullscreen = True, resizable = True, do_not_scale = False)
         self.control_layer = ControlLayer()
         board_scene = BoardScene(self.control_layer, game)
         player_board_scene = PlayerBoardScene(self.control_layer)
