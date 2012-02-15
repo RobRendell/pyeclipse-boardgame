@@ -58,8 +58,10 @@ class Game(object):
             self.outer_sectors_drawpile.draw()
         
         #choose a first player
-        self.first_player = random.choice(self.players)
-        self.current_player = self.first_player
+        random.shuffle(self.players)
+        #self.current_player = self.players[0]
+        self.player_iterator = self.next_player()
+        self.current_player = self.player_iterator.next()
         
         #assign a personal board, a starting hex and a personal supply to each player
         for n, player in enumerate(self.players):
@@ -107,12 +109,23 @@ class Game(object):
             for cube_slot in self.board.get_content(coord, zn.ResourceSlot):
                 if cube_slot.isAllowed(player):
                     cube_slot.add(player.personal_board.population_track.take(cube_slot.resource_type))
-
             
     def get_current_round(self):
         return len(self.rounds)
     
-    def move(self, component, destination , zone_from = None, zone_to = None):
+    def next_player(self):
+        """Return a generator iterating over the players."""
+        n = 0
+        n_players = len(self.players)
+        while(True):
+            yield self.players[n % n_players]
+            n += 1
+
+    def end_turn(self, passing = False):
+        """End of an action turn. The current player is updated."""
+        self.current_player = self.player_iterator.next()
+    
+    def move(self, component = None, zone_from = None, zone_to = None):
         """
         Move a component (influence disc, ships, hex, population cube). Destination
         is hex coordinates (tuple)
@@ -121,8 +134,9 @@ class Game(object):
             zone_from = self.board
         if zone_to is None:
             zone_to = self.board
-        self.zone_from.take(component)
-        self.zone_to.add(destination, component)
+        if component is None:
+            component = zone_from.take()
+        zone_to.add(component)
         
     def draw_hex(self, coord):
         """
@@ -153,7 +167,7 @@ class Game(object):
         """
         Place a SectorTile on the board.
         """
-        self.board.add(coord, sector_tile)    
+        self.board.add(coord, sector_tile)        
         
 class Phase(object):
     pass
