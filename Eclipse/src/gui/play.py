@@ -20,6 +20,8 @@ import random
 from engine.zone import Sector, ResourceSlot
 from engine.component import InfluenceDisc, Ship, Interceptor, Cruiser
 from pyglet.window.mouse import LEFT, RIGHT
+from pyglet.event import EVENT_HANDLED
+from cocos.rect import Rect
 
 pyglet.resource.path.append('./image')
 pyglet.resource.path.append('../image')
@@ -239,18 +241,41 @@ class BoardLayer(ScrollableLayer):
         self.scroller = self.get_ancestor(ScrollingManager)
         
 class PlayerBoardLayer(Layer):
+    is_event_handler = True
     def __init__(self, player):
         super(PlayerBoardLayer, self).__init__()
         self.add(Label('PlayerBoardLayer'))
         width,height = director.get_window_size()
         position = (width/2, height/2)
-        picture_name = 'player_board_' + player.color + '_terran.jpg'
+        picture_name = 'player_board_' +\
+                        player.color +\
+                        ('_terran' if 'terran' in player.faction.name else '_alien') +\
+                        '.jpg'
         player_board_sprite = Sprite(picture_name,
-                                     scale = 1,
+                                     scale = 0.45,
                                      position = position                              
                                      )
         self.add(player_board_sprite)
+        #defining the rectangular zone
+        self.rect_player_board = player_board_sprite.get_AABB()
+        width, heigth = self.rect_player_board.size
+        x, y = self.rect_player_board.bottomleft
+        self.rect_influence = Rect(x + width * 0.107, 
+                                   y + height * 0.075, 
+                                   width * 0.72, 
+                                   heigth * 0.07)
+        self.draw_rect(self.rect_influence)
         
+    def draw_rect(self, rect):   
+        for line in ((rect.topleft,     rect.topright), 
+                     (rect.topright,    rect.bottomright),
+                     (rect.bottomright, rect.bottomleft),
+                     (rect.bottomleft,  rect.topleft)):
+            self.add(Line(line[0], line[1], (255,255,255,255)), 2)
+            
+    def on_mouse_press (self, x, y, button, modifiers):
+        x, y = director.get_virtual_coordinates(x, y)
+        print self.rect_player_board.contains(x,y)
         
 class ReasearchTrackLayer(Layer):
     def __init__(self):
@@ -294,25 +319,49 @@ class InfoLayer(Layer):
         self.info.do(InfoAction(text, '_', 0.4))
         
 class ActionLayer(Layer):
-    def __init__(self, faction):
+    is_event_handler = True
+    def __init__(self, game):
         super(ActionLayer, self).__init__()
-        action_board_sprite = Sprite('action_board_terran.png')
-        action_board_sprite.transform_anchor = (1,100000)
-        self.add(action_board_sprite)
-        action_board_sprite.position = action_board_sprite.get_AABB().topleft
-        action_board_sprite.x += director.get_window_size()[0]
+        self.game = game
+        self.action_board_sprite = Sprite('action_board_terran.png', scale = 0.3)
+        #self.action_board_sprite.transform_anchor = (1,100000)
+        self.add(self.action_board_sprite)
+        self.action_board_sprite.position = self.action_board_sprite.get_AABB().topleft
+        self.action_board_sprite.x += director.get_window_size()[0]
+        self.action_list = ('Explore',
+                            'Influence',
+                            'Research',
+                            'Upgrade',
+                            'Build',
+                            'Move'
+                            )
+        self.action_position = [0.2, 1.12, 2.05, 3, 3.95, 4.9]
+        self.selection_sprite = Sprite('action_selection_halo.png', scale = 0.3, position = self.action_board_sprite.position)
         
+    def on_mouse_press(self, x, y, button, modifiers): 
+        rect = self.action_board_sprite.get_AABB()        
+        x, y = director.get_virtual_coordinates(x, y)
+        if rect.contains(x, y):
+            dx = (rect.right - rect.left) / 6.0
+            for n in range(6):
+                if rect.left + dx * n < x < rect.left + dx * (n + 1):
+                    self.parent.info_layer.set_info('Select Action: ' + self.action_list[n])
+                    self.add(self.selection_sprite)
+                    self.selection_sprite.x = rect.left + (self.action_position[n] + 0.5) * dx 
+                    self.selection_sprite.color = color_convert(self.game.current_player.color)
+                    return EVENT_HANDLED
+                   
 class BoardScene(Scene):
     def __init__(self, control_layer, game):
         super(BoardScene, self).__init__()
         self.add(ColorLayer(0,0,0,255), 0)
         scroller = ScrollingManager()        
-        info_layer = InfoLayer()
-        action_layer = ActionLayer(None)
-        scroller.add(BoardLayer(scroller, info_layer, game))
+        self.info_layer = InfoLayer()
+        action_layer = ActionLayer(game)
+        scroller.add(BoardLayer(scroller, self.info_layer, game))
         self.add(scroller)
         self.add(control_layer, 2)
-        self.add(info_layer, 3)
+        self.add(self.info_layer, 3)
         self.add(action_layer, 4)
         
 class PlayerBoardScene(Scene):
@@ -324,7 +373,7 @@ class PlayerBoardScene(Scene):
         
 class MainScreen(object):
     def __init__(self, game):  
-        director.init(fullscreen = True, resizable = True, do_not_scale = False)
+        director.init(fullscreen = False, resizable = True, do_not_scale = False, width = 1200, height = 800)
         self.control_layer = ControlLayer(game)
         board_scene = BoardScene(self.control_layer, game)
         player_board_scenes = []
