@@ -125,7 +125,7 @@ class Game(object):
         """End of an action turn. The current player is updated."""
         self.current_player = self.player_iterator.next()
     
-    def move(self, component = None, zone_from = None, zone_to = None):
+    def move(self, zone_from = None, zone_to = None, component = None, component_type = None):
         """
         Move a component (influence disc, ships, hex, population cube). Destination
         is hex coordinates (tuple)
@@ -135,7 +135,9 @@ class Game(object):
         if zone_to is None:
             zone_to = self.board
         if component is None:
-            component = zone_from.take()
+            component = zone_from.take(component_type = component_type)
+        else:
+            zone_from.take(component_type = component_type)
         zone_to.add(component)
         
     def draw_hex(self, coord):

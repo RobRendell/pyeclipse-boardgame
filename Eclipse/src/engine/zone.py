@@ -21,10 +21,14 @@ class Zone(object):
         """Add a component to the zone."""
         self.components.append(component)
         
-    def take(self, component = None):
+    def take(self, component = None, component_type = None):
         """return a component and remove it from the zone."""
         if component is None:
-            return self.components.pop()        
+            if component_type is None:
+                return self.components.pop()
+            for n, comp in enumerate(self.components):
+                if isinstance(comp, component_type):
+                    return self.components.pop(n)
         self.components.remove(component)
         return component
 
@@ -65,9 +69,6 @@ class Board(Zone):
                 sector.add(ResourceSlot())
         else:
             self.hex_grid[coord].add(component)
-        
-    def take(self, component):        
-        pass
 
     def get_content(self, coord = None, comp_type = None):
         """
@@ -76,7 +77,9 @@ class Board(Zone):
         The first item of the list is always the sector itself.
         """
         if coord is None:
-            return self.hex_grid
+            if comp_type is None:
+                return self.hex_grid
+            return dict([(coord, sector.get_content(comp_type)) for coord,sector in self.hex_grid.iteritems()])
         if coord not in self.hex_grid:
             return None
         if comp_type is Sector:
@@ -243,6 +246,9 @@ class PopulationTrack(Zone):
         
     def take(self, resource_type):
         return self.zones[resource_type].take()
+    
+    def get_content(self):
+        return self.zones
         
 class PopulationResourceTrack(Zone):
     def __init__(self, owner, resource_type):

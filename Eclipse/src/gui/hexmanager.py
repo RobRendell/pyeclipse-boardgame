@@ -3,6 +3,7 @@ Created on 9 janv. 2012
 
 @author: jglouis
 '''
+import random
 import math
 
 class HexManager(object):
@@ -17,6 +18,7 @@ class HexManager(object):
         self.L = 2 * self.l / math.sqrt(3)
         self.x_offset = center_rect_coord[0]
         self.y_offset = center_rect_coord[1]
+        self.sprite_slots = {} #relative hex coord -> sprite
         
     def get_hex_from_hex_coord(self, u, v):
         """get the hexagon coordinates containing the point (u,v)"""
@@ -67,6 +69,23 @@ class HexManager(object):
         """ get the rect coordinate to place ships"""
         sx, sy = self.get_rect_coord_from_hex_coord(0.25 + u, 0.25 + v)
         return (sx, sy)
+    
+    def get_sprite_coord(self, u, v):
+        """ get the rect coordinate to place a sprite"""
+        slots = [(u + 0.25, v + 0.25),
+                 (u + 0.25, v),
+                 (u, v - 0.25),
+                 (u - 0.25, v - 0.25),
+                 (u - 0.25, v),
+                 (u, v + 0.25)
+                 ]
+        random.shuffle(slots)
+        for hex_coord in slots:
+            if hex_coord not in self.sprite_slots :
+                self.sprite_slots[hex_coord] = 'Occupied'
+                u, v = hex_coord
+                return self.get_rect_coord_from_hex_coord(u, v)
+        
     
 if __name__ == "__main__":
     hm = HexManager(20.0)

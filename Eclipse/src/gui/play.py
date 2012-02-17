@@ -56,6 +56,9 @@ class SelectableSprite(Sprite):
         super(SelectableSprite, self).__init__(*args, **kwargs)
         self.obj = obj
         
+class BackgroundSprite(Sprite):
+    pass       
+        
 class BoardLayer(ScrollableLayer):
     is_event_handler = True
     def __init__(self, scroller, info_layer, game):
@@ -74,7 +77,7 @@ class BoardLayer(ScrollableLayer):
         self.hex_color_sprites = {}
 
         if self.game:
-            for coord, sector in self.game.board.get_content().iteritems():
+            for coord in self.game.board.get_content().iterkeys():
                 self.display_sector(coord)
     
     def set_hex_color(self, coord, color):
@@ -108,7 +111,7 @@ class BoardLayer(ScrollableLayer):
                 ship_picture = 'interceptor.png'
             elif isinstance(ship, Cruiser):
                 ship_picture = 'cruiser.png'
-            ship_coord = self.hex_manager.get_fleet_coord(u, v)
+            ship_coord = self.hex_manager.get_sprite_coord(u, v)
             ship_sprite = SelectableSprite(ship,
                                            ship_picture,
                                            scale = 0.2,
@@ -116,22 +119,41 @@ class BoardLayer(ScrollableLayer):
                                            color = color_convert(ship.color)
                                            )
             self.add(ship_sprite, z = 2)
+            
         #planets
-        ordered_slots = [slot for slot in sector.get_content(ResourceSlot)]
-        ordered_slots.sort(key=lambda x: x.resource_type)
-        type_of_planets = set([slot.resource_type for slot in ordered_slots])
-        for rt,scoord in zip(type_of_planets, self.hex_manager.get_planets_coord(u, v)):
+        all_slots = {None:[],
+                 'money':[],
+                 'science':[],
+                 'material':[]
+                 }
+        for slot in sector.get_content(ResourceSlot):
+            all_slots[slot.resource_type].append(slot)
+
+        for resource_type, slots in all_slots.iteritems():
+            if len(slots) == 0:
+                continue
             color = {None       :(255,255,255),
                      'money'    :(212,100,4),
                      'material' :(136,72,41),
                      'science'  :(230,146,161)
-                     }[rt]
+                     }[resource_type]
+            position = self.hex_manager.get_sprite_coord(u, v)         
             planet_sprite = Sprite('planet.png',
-                                   position = scoord,
+                                   position = position,
                                    scale = 0.05,
                                    color = color
                                    )
             self.add(planet_sprite, z = 1)
+            x, y = position
+            for slot, position in zip(slots, [(x - 10, y),(x + 10, y)]):
+                slot_picture = 'slot_wild_adv.png' if slot.advanced else 'slot_wild.png'
+                slot_sprite = SelectableSprite(slot,
+                                               slot_picture,
+                                               position = position,
+                                               color = color,
+                                               scale = 0.2)
+                self.add(slot_sprite, 2)
+                
         #vp
         vp = sector.victory_points
         vp_picture = {1 :'reputation1.png',
@@ -169,14 +191,15 @@ class BoardLayer(ScrollableLayer):
                         self.display_sector(coord)
                     else:
                         self.info_layer.set_info('No New Sector to explore -Aborting')
-                elif len(sector.get_content(InfluenceDisc)) == 0:
-                                             
-                    self.game.move(zone_from = self.game.current_player.personal_board.influence_track, zone_to = sector)
+                elif len(sector.get_content(InfluenceDisc)) == 0:                                             
+                    self.game.move(self.game.current_player.personal_board.influence_track, sector)
                     self.set_hex_color(coord, self.game.current_player.color)
                     self.info_layer.set_info('Influence on sector '+ sector.name)
                 else:
-                    self.info_layer.set_info('Action not recognized') 
-            
+                    player = sector.get_content(InfluenceDisc)[0].owner
+                    self.game.move(sector, player.personal_board.influence_track, component_type = InfluenceDisc)
+                    self.set_hex_color(coord, 'grey')
+                    self.info_layer.set_info('Influence removed from Sector')          
             elif sector is not None:
                 self.info_layer.set_info(str(sector))
             else:
@@ -242,8 +265,10 @@ class BoardLayer(ScrollableLayer):
         
 class PlayerBoardLayer(Layer):
     is_event_handler = True
-    def __init__(self, player):
+    def __init__(self, player):        
         super(PlayerBoardLayer, self).__init__()
+        self.player = player
+        self.color = color_convert(self.player.color)
         self.add(Label('PlayerBoardLayer'))
         width,height = director.get_window_size()
         position = (width/2, height/2)
@@ -251,20 +276,109 @@ class PlayerBoardLayer(Layer):
                         player.color +\
                         ('_terran' if 'terran' in player.faction.name else '_alien') +\
                         '.jpg'
-        player_board_sprite = Sprite(picture_name,
-                                     scale = 0.45,
+        player_board_sprite = BackgroundSprite(picture_name,
+                                     scale = 0.95,
                                      position = position                              
                                      )
         self.add(player_board_sprite)
         #defining the rectangular zone
         self.rect_player_board = player_board_sprite.get_AABB()
-        width, heigth = self.rect_player_board.size
-        x, y = self.rect_player_board.bottomleft
-        self.rect_influence = Rect(x + width * 0.107, 
-                                   y + height * 0.075, 
-                                   width * 0.72, 
-                                   heigth * 0.07)
-        self.draw_rect(self.rect_influence)
+        #width, heigth = self.rect_player_board.size ----> bug ?
+        width = self.rect_player_board.width
+        height = self.rect_player_board.height
+        x, y = self.rect_player_board.bottomleft        
+        
+        self.rect_influence = Rect(x + 0.106 * width, 
+                                   y + 0.076 * height, 
+                                   width * 0.725, 
+                                   height * 0.07)
+        self.rect_population_material = Rect(x + 0.105 * width, 
+                                             y + 0.17 * height, 
+                                             width * 0.38, 
+                                             height * 0.04)        
+        self.rect_population_science = Rect(x + 0.105 * width, 
+                                            y + 0.215 * height, 
+                                            width * 0.38, 
+                                            height * 0.04)        
+        self.rect_population_money = Rect(x + 0.105 * width, 
+                                          y + 0.262 * height, 
+                                          width * 0.38, 
+                                          height * 0.04)
+        self.refresh_display()
+        
+    def refresh_display(self):
+        #erase all sprites but the background
+        for child in self.get_children():
+            if isinstance(child, Sprite) and not isinstance(child, BackgroundSprite):
+                child.kill()
+        #influence track        
+        n_influence = len(self.player.personal_board.influence_track.get_content())
+        for n in range(n_influence):
+            position = self.get_influence_coord(n)
+            influence_sprite = Sprite('influence white.png',
+                                      position = position,
+                                      color = self.color,
+                                      scale = 1.5)
+            self.add(influence_sprite, 2)
+            
+        #population track(s)
+        for track in self.player.personal_board.population_track.get_content().itervalues():
+            n_pop = len(track.get_content())
+            for n in range(n_pop):
+                position = self.get_population_coord(n, track.resource_type)
+                population_sprite = Sprite('population white.png',
+                                           position = position,
+                                           color = self.color,
+                                           scale = 1.2)
+                self.add(population_sprite, 2)
+            
+    def on_enter(self):
+        self.refresh_display()
+        return Layer.on_enter(self)
+        
+    def get_influence_coord(self, n):
+        """
+        Get the coordinates to place the influence sprites on the influence track.
+        n = 0 is the influence to the extreme left and n = 12 is the one the
+        extreme right.
+        """
+        rect = self.rect_influence
+        x = rect.left + (n + 0.5) / 13 * rect.width
+        y = rect.bottom + 0.5 * rect.height
+        return (x, y)
+    
+    def get_population_coord(self, n, resource_type):
+        """
+        Get the coordinates to place the population sprites on the population track.
+        n = 0 is the population to the extreme left and n = 12 is the one the
+        extreme right.
+        resource_type is either 'money', 'material' or 'science'
+        """
+        rect = {'money':    self.rect_population_money,
+                'science':  self.rect_population_science,
+                'material': self.rect_population_material
+                }[resource_type]
+        x = rect.left + (n + 0.5) / 12 * rect.width
+        y = rect.bottom + 0.5 * rect.height
+        return (x, y)
+        
+    def draw_grid(self, rect, nh, nv):
+        #horizontal lines
+        for n in range(nh):
+            x1 = rect.left
+            x2 = rect.right
+            y = rect.bottom + 1.0 * n / nh * rect.height
+            a = (x1, y)
+            b = (x2, y)
+            self.add(Line(a,b,(255,255,255,255)),2)
+        #vertical lines
+        for n in range(nv):
+            x = rect.left + 1.0 * n / nv * rect.width
+            y1 = rect.top
+            y2 = rect.bottom
+            a = (x, y1)
+            b = (x, y2)
+            self.add(Line(a,b,(255,255,255,255)),2)
         
     def draw_rect(self, rect):   
         for line in ((rect.topleft,     rect.topright), 
@@ -373,7 +487,7 @@ class PlayerBoardScene(Scene):
         
 class MainScreen(object):
     def __init__(self, game):  
-        director.init(fullscreen = False, resizable = True, do_not_scale = False, width = 1200, height = 800)
+        director.init(fullscreen = True, resizable = True, do_not_scale = False)
         self.control_layer = ControlLayer(game)
         board_scene = BoardScene(self.control_layer, game)
         player_board_scenes = []
