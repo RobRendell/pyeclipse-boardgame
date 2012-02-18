@@ -11,17 +11,17 @@ class Zone(object):
         for c in args:
             self.components.add(c)
 
-    def get_content(self, component_type = None):
+    def get_content(self, component_type = None, **kwargs):
         """Return either a list/dict of components or the number of components."""
         if component_type is not None:
             return [comp for comp in self.components if isinstance(comp, component_type)]        
         return self.components
     
-    def add(self, component):
+    def add(self, component, **kwargs):
         """Add a component to the zone."""
         self.components.append(component)
         
-    def take(self, component = None, component_type = None):
+    def take(self, component = None, component_type = None, **kwargs):
         """return a component and remove it from the zone."""
         if component is None:
             if component_type is None:
@@ -241,10 +241,10 @@ class PopulationTrack(Zone):
         for resource_type in ['money', 'science', 'material']:
             self.zones[resource_type] = PopulationResourceTrack(owner, resource_type)
             
-    def add(self, population_cube, resource_type):
+    def add(self, population_cube, resource_type, **kwargs):
         self.zones[resource_type].add(population_cube)
         
-    def take(self, resource_type):
+    def take(self, resource_type, **kwargs):
         return self.zones[resource_type].take()
     
     def get_content(self):
