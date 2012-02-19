@@ -106,7 +106,7 @@ class Game(object):
                                                                                 'cruiser' : cp.Cruiser                                                                              
                                                                                 }[player.faction.starting_unit]
                                                               ))
-            for cube_slot in self.board.get_content(coord, zn.ResourceSlot):
+            for cube_slot in self.board.get_components(coord, zn.ResourceSlot):
                 if cube_slot.isAllowed(player):
                     cube_slot.add(player.personal_board.population_track.take(cube_slot.resource_type))
             
@@ -149,13 +149,13 @@ class Game(object):
         draw_pile_number = min(max(abs_coord), 3)
         #with the coordinate system, there are some exceptions to the simple formula above
         if (coord == (-1,1)
-        or coord == (1,-1)
-        or coord == (-2,1)
-        or coord == (-1,2)
-        or coord == (2,-1)
-        or coord == (1,-2)
-        or coord == (-2,2)
-        or coord == (2,-2)):
+            or coord == (1,-1)
+            or coord == (-2,1)
+            or coord == (-1,2)
+            or coord == (2,-1)
+            or coord == (1,-2)
+            or coord == (-2,2)
+            or coord == (2,-2)):
             draw_pile_number += 1
 
 

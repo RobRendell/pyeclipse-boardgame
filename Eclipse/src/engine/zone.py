@@ -11,7 +11,7 @@ class Zone(object):
         for c in args:
             self.components.add(c)
 
-    def get_content(self, component_type = None, **kwargs):
+    def get_components(self, component_type = None, **kwargs):
         """Return either a list/dict of components or the number of components."""
         if component_type is not None:
             return [comp for comp in self.components if isinstance(comp, component_type)]        
@@ -70,7 +70,7 @@ class Board(Zone):
         else:
             self.hex_grid[coord].add(component)
 
-    def get_content(self, coord = None, comp_type = None):
+    def get_components(self, coord = None, comp_type = None):
         """
         If coord is not given, then it returns the whole board dictionary.
         If coord is given, then it returns the content of the corresponding hex.
@@ -79,14 +79,14 @@ class Board(Zone):
         if coord is None:
             if comp_type is None:
                 return self.hex_grid
-            return dict([(coord, sector.get_content(comp_type)) for coord,sector in self.hex_grid.iteritems()])
+            return dict([(coord, sector.get_components(comp_type)) for coord,sector in self.hex_grid.iteritems()])
         if coord not in self.hex_grid:
             return None
         if comp_type is Sector:
             return self.hex_grid[coord]
         if comp_type is not None:
-            return self.hex_grid[coord].get_content(comp_type)
-        return [self.hex_grid[coord]] + self.hex_grid[coord].get_content()
+            return self.hex_grid[coord].get_components(comp_type)
+        return [self.hex_grid[coord]] + self.hex_grid[coord].get_components()
     
 class ResourceSlot(Zone):
     """A slot for a population cube."""
@@ -149,7 +149,7 @@ class DrawPile(Zone):
     def shuffle(self):
         random.shuffle(self.content)
 
-    def get_content(self):
+    def get_components(self):
         return len(self.content)
         
 
@@ -247,7 +247,7 @@ class PopulationTrack(Zone):
     def take(self, resource_type, **kwargs):
         return self.zones[resource_type].take()
     
-    def get_content(self):
+    def get_zones(self):
         return self.zones
         
 class PopulationResourceTrack(Zone):
@@ -316,7 +316,7 @@ class ReputationTrack(Zone):
         else:
             self.track['reputation'].remove(component)
 
-    def get_content(self):
+    def get_components(self):
         return self.track
 
 class ResearchTrack(Zone):

@@ -16,7 +16,7 @@ def create_technology_tile(row):
         row[4]
     )
 
-reader = csv.reader(open('data\\technologytiles.csv'), delimiter = ';')
+reader = csv.reader(open('data/technologytiles.csv'), delimiter = ';')
 
 #skip the first line
 reader.next()

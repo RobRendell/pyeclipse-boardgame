@@ -1,6 +1,5 @@
-import sys
-sys.path.append('C:\\Users\\jglouis\\workspace\\Eclipse\\src\\material\\data')
-print sys.path
+#import sys
+#sys.path.append('C:\\Users\\jglouis\\workspace\\Eclipse\\src\\material\\data')
 
 
 from engine.rule.game import Game

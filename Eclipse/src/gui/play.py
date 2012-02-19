@@ -18,12 +18,12 @@ from hexmanager import HexManager
 from cocos.actions.base_actions import IntervalAction
 import random
 from engine.zone import Sector, ResourceSlot
-from engine.component import InfluenceDisc, Ship, Interceptor, Cruiser
+from engine.component import InfluenceDisc, Ship, Interceptor, Cruiser,\
+    AncientShip, GalacticCenterDefenseSystem, DiscoveryTile
 from pyglet.window.mouse import RIGHT
 from pyglet.event import EVENT_HANDLED
 from cocos.rect import Rect
 from pyglet.window.key import B, R, _1, P
-from cocos import sprite
 
 pyglet.resource.path.append('./image')
 pyglet.resource.path.append('./image/boards')
@@ -36,10 +36,8 @@ pyglet.resource.path.append('./image/ships')
 pyglet.resource.path.append('./font')
 #pyglet.resource.path.append('./gui')
 pyglet.resource.reindex()
-try:
-    pyglet.font.add_directory('font')
-except:
-    pyglet.font.add_directory('../font')
+
+pyglet.font.add_directory('font')
     
 def color_convert(text):
     if text == 'blank':
@@ -83,7 +81,7 @@ class BoardLayer(ScrollableLayer):
         self.game = game
         self.hex_color_sprites = {}
         
-        for coord in self.game.board.get_content().iterkeys():
+        for coord in self.game.board.get_components().iterkeys():
             self.display_sector(coord)
     
     def set_hex_color(self, coord, color):
@@ -102,21 +100,26 @@ class BoardLayer(ScrollableLayer):
         
     def display_sector(self, coord):
         u, v = coord
-        sector = self.game.board.get_content()[coord]
+        sector = self.game.board.get_components()[coord]
         rect_position = self.hex_manager.get_rect_coord_from_hex_coord(u, v)
         #hex_color
         try:
-            color = sector.get_content(InfluenceDisc)[0].color
+            color = sector.get_components(InfluenceDisc)[0].color
         except:
             color = 'grey'
         self.set_hex_color(coord, color)
         
         #ships
-        for ship in sector.get_content(Ship):
+        for ship in sector.get_components(Ship):
+            
+            #change that into a dictionary
+            
             if isinstance(ship, Interceptor):
                 ship_picture = 'interceptor.png'
             elif isinstance(ship, Cruiser):
                 ship_picture = 'cruiser.png'
+                
+                
             ship_coord = self.hex_manager.get_sprite_coord(u, v)
             ship_sprite = SelectableSprite(ship,
                                            ship_picture,
@@ -132,7 +135,7 @@ class BoardLayer(ScrollableLayer):
                  'science':[],
                  'material':[]
                  }
-        for slot in sector.get_content(ResourceSlot):
+        for slot in sector.get_components(ResourceSlot):
             all_slots[slot.resource_type].append(slot)
 
         for resource_type, slots in all_slots.iteritems():
@@ -159,10 +162,10 @@ class BoardLayer(ScrollableLayer):
                                                color = color,
                                                scale = 0.2)
                 self.add(slot_sprite, 2)
-                if len(slot.get_content()) == 1:
+                if len(slot.get_components()) == 1:
                     population_sprite = Sprite('population white.png',
                                                position = position,
-                                               color = color_convert(slot.get_content()[0].color),
+                                               color = color_convert(slot.get_components()[0].color),
                                                scale = 0.2
                                                )
                     self.add(population_sprite, 3)
@@ -176,22 +179,47 @@ class BoardLayer(ScrollableLayer):
         vp_sprite = Sprite(vp_picture,
                            position = rect_position,
                            scale = 0.2)
-        self.add(vp_sprite, z = 1)
+        self.add(vp_sprite, 1)
+        
+        #discovery
+        if len(sector.get_components(DiscoveryTile)):
+            discovery_tile_sprite = Sprite('discovery_tile_back.png',
+                                           position = rect_position,
+                                           scale = 0.3
+                                           )
+            self.add(discovery_tile_sprite, 1)
+        
+        #ancients and gdc (npc)
+        n_ancients = len(sector.get_components(AncientShip))
+        for n in range(n_ancients):
+            ancient_sprite = Sprite('ancient_ship.png',
+                                    position = rect_position,
+                                    scale = 0.3
+                                    )
+            ancient_sprite.x +=  20.0 * (n - (1.0 * n / n_ancients))
+            ancient_sprite.y +=  20.0 * (n - (1.0 * n / n_ancients))
+            self.add(ancient_sprite, 2)
+        if len(sector.get_components(GalacticCenterDefenseSystem)):
+            gdc_sprite = Sprite('gdc.png',
+                                position = rect_position,
+                                scale = 0.3
+                                )
+            self.add(gdc_sprite, 2)
 
     def on_mouse_press (self, x, y, button, modifiers):        
         x, y = self.scroller.pixel_from_screen(x,y)
         hex_u, hex_v = self.hex_manager.get_hex_from_rect_coord(x, y)
         coord = (hex_u, hex_v)
         
-        sector = self.game.board.get_content(coord, Sector)
+        sector = self.game.board.get_components(coord, Sector)
         
         #Selectable sprite
         for child in self.get_children():            
             if isinstance(child, SelectableSprite):
                 if child.get_AABB().contains(x, y):
                     if isinstance(child.obj, ResourceSlot) and button == RIGHT:
-                        player = sector.get_content(InfluenceDisc)[0].owner
-                        if len(child.obj.get_content()) == 1:
+                        player = sector.get_components(InfluenceDisc)[0].owner
+                        if len(child.obj.get_components()) == 1:
                             self.game.move(child.obj, player.personal_board.population_track, resource_type = child.obj.resource_type)
                             self.remove(child)
                         else:
@@ -222,12 +250,12 @@ class BoardLayer(ScrollableLayer):
                     self.display_sector(coord)
                 else:
                     self.info_layer.set_info('No New Sector to explore -Aborting')
-            elif len(sector.get_content(InfluenceDisc)) == 0:                                             
+            elif len(sector.get_components(InfluenceDisc)) == 0:                                             
                 self.game.move(self.game.current_player.personal_board.influence_track, sector)
                 self.set_hex_color(coord, self.game.current_player.color)
                 self.info_layer.set_info('Influence on sector '+ sector.name)
             else:
-                player = sector.get_content(InfluenceDisc)[0].owner
+                player = sector.get_components(InfluenceDisc)[0].owner
                 self.game.move(sector, player.personal_board.influence_track, component_type = InfluenceDisc)
                 self.set_hex_color(coord, 'grey')
                 self.info_layer.set_info('Influence removed from Sector')          
@@ -343,7 +371,7 @@ class PlayerBoardLayer(Layer):
             if isinstance(child, Sprite) and not isinstance(child, BackgroundSprite):
                 child.kill()
         #influence track        
-        n_influence = len(self.player.personal_board.influence_track.get_content())
+        n_influence = len(self.player.personal_board.influence_track.get_components())
         for n in range(n_influence):
             position = self.get_influence_coord(n)
             influence_sprite = Sprite('influence white.png',
@@ -353,8 +381,8 @@ class PlayerBoardLayer(Layer):
             self.add(influence_sprite, 2)
             
         #population track(s)
-        for track in self.player.personal_board.population_track.get_content().itervalues():
-            n_pop = len(track.get_content())
+        for track in self.player.personal_board.population_track.get_zones().itervalues():
+            n_pop = len(track.get_components())
             for n in range(n_pop):
                 position = self.get_population_coord(n, track.resource_type)
                 population_sprite = Sprite('population white.png',
@@ -445,15 +473,18 @@ class ControlLayer(Layer):
         self.scenes = {}
         
     def on_key_press(self, key, modifiers):
-        if key == P:
-            current_player = self.game.current_player
-            scene = [scene for scene in self.scenes.itervalues()
-                     if isinstance(scene, PlayerBoardScene)
-                     and scene.player == current_player
-                     ][0]
-            director.replace(FadeUpTransition(scene, duration = 0.3))
-        elif key in self.scenes:
-            director.replace(FadeUpTransition(self.scenes[key], duration = 0.3))
+        try:
+            if key == P:
+                current_player = self.game.current_player
+                scene = [scene for scene in self.scenes.itervalues()
+                         if isinstance(scene, PlayerBoardScene)
+                         and scene.player == current_player
+                         ][0]
+                director.replace(FadeUpTransition(scene, duration = 0.3))
+            elif key in self.scenes:
+                director.replace(FadeUpTransition(self.scenes[key], duration = 0.3))
+        except:
+            pass
             
     def add_scene(self, scene, key):
         """

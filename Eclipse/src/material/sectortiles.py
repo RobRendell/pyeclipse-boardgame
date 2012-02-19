@@ -31,7 +31,7 @@ def create_sector_tile(row):
         int(row[13])
     )
 
-reader = csv.reader(open('data\\sectortiles.csv'), delimiter = ';')
+reader = csv.reader(open('data/sectortiles.csv'), delimiter = ';')
 
 #skip the first line
 reader.next()
