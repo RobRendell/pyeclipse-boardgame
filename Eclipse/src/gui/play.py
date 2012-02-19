@@ -24,6 +24,7 @@ from pyglet.window.mouse import RIGHT
 from pyglet.event import EVENT_HANDLED
 from cocos.rect import Rect
 from pyglet.window.key import B, R, _1, P
+from cocos.batch import BatchNode
 
 pyglet.resource.path.append('./image')
 pyglet.resource.path.append('./image/boards')
@@ -80,6 +81,9 @@ class BoardLayer(ScrollableLayer):
         self.info_layer = info_layer
         self.game = game
         self.hex_color_sprites = {}
+
+        self.batch = BatchNode()
+        self.add(self.batch)
         
         for coord in self.game.board.get_components().iterkeys():
             self.display_sector(coord)
@@ -98,7 +102,7 @@ class BoardLayer(ScrollableLayer):
             self.add(hexa)
             self.hex_color_sprites[coord] = hexa
         
-    def display_sector(self, coord):
+    def display_sector(self, coord):                   
         u, v = coord
         sector = self.game.board.get_components()[coord]
         rect_position = self.hex_manager.get_rect_coord_from_hex_coord(u, v)
@@ -127,7 +131,7 @@ class BoardLayer(ScrollableLayer):
                                            position = ship_coord,
                                            color = color_convert(ship.color)
                                            )
-            self.add(ship_sprite, z = 2)
+            self.batch.add(ship_sprite, z = 2)
             
         #planets
         all_slots = {None:[],
@@ -152,7 +156,7 @@ class BoardLayer(ScrollableLayer):
                                    scale = 0.05,
                                    color = color
                                    )
-            self.add(planet_sprite, z = 1)
+            self.batch.add(planet_sprite, z = 1)
             x, y = position
             for slot, position in zip(slots, [(x - 10, y),(x + 10, y)]):
                 slot_picture = 'slot_wild_adv.png' if slot.advanced else 'slot_wild.png'
@@ -161,14 +165,14 @@ class BoardLayer(ScrollableLayer):
                                                position = position,
                                                color = color,
                                                scale = 0.2)
-                self.add(slot_sprite, 2)
+                self.batch.add(slot_sprite, 2)
                 if len(slot.get_components()) == 1:
                     population_sprite = Sprite('population white.png',
                                                position = position,
                                                color = color_convert(slot.get_components()[0].color),
                                                scale = 0.2
                                                )
-                    self.add(population_sprite, 3)
+                    self.batch.add(population_sprite, 3)
                 
         #vp
         vp = sector.victory_points
@@ -179,7 +183,7 @@ class BoardLayer(ScrollableLayer):
         vp_sprite = Sprite(vp_picture,
                            position = rect_position,
                            scale = 0.2)
-        self.add(vp_sprite, 1)
+        self.batch.add(vp_sprite, 1)
         
         #discovery
         if len(sector.get_components(DiscoveryTile)):
@@ -187,7 +191,7 @@ class BoardLayer(ScrollableLayer):
                                            position = rect_position,
                                            scale = 0.3
                                            )
-            self.add(discovery_tile_sprite, 1)
+            self.batch.add(discovery_tile_sprite, 2)
         
         #ancients and gdc (npc)
         n_ancients = len(sector.get_components(AncientShip))
@@ -198,15 +202,15 @@ class BoardLayer(ScrollableLayer):
                                     )
             ancient_sprite.x +=  20.0 * (n - (1.0 * n / n_ancients))
             ancient_sprite.y +=  20.0 * (n - (1.0 * n / n_ancients))
-            self.add(ancient_sprite, 2)
+            self.batch.add(ancient_sprite, 3)
         if len(sector.get_components(GalacticCenterDefenseSystem)):
             gdc_sprite = Sprite('gdc.png',
                                 position = rect_position,
                                 scale = 0.3
                                 )
-            self.add(gdc_sprite, 2)
+            self.batch.add(gdc_sprite, 3)
 
-    def on_mouse_press (self, x, y, button, modifiers):        
+    def on_mouse_press (self, x, y, button, modifiers):               
         x, y = self.scroller.pixel_from_screen(x,y)
         hex_u, hex_v = self.hex_manager.get_hex_from_rect_coord(x, y)
         coord = (hex_u, hex_v)
@@ -214,14 +218,14 @@ class BoardLayer(ScrollableLayer):
         sector = self.game.board.get_components(coord, Sector)
         
         #Selectable sprite
-        for child in self.get_children():            
+        for child in self.batch.get_children():            
             if isinstance(child, SelectableSprite):
                 if child.get_AABB().contains(x, y):
                     if isinstance(child.obj, ResourceSlot) and button == RIGHT:
                         player = sector.get_components(InfluenceDisc)[0].owner
                         if len(child.obj.get_components()) == 1:
                             self.game.move(child.obj, player.personal_board.population_track, resource_type = child.obj.resource_type)
-                            self.remove(child)
+                            self.batch.remove(child)
                         else:
                             self.game.move(player.personal_board.population_track, child.obj, resource_type = child.obj.resource_type)
                             color = color_convert(player.color)
@@ -230,15 +234,11 @@ class BoardLayer(ScrollableLayer):
                                                        color = color,
                                                        scale = 0.2
                                                        )
-                            self.add(population_sprite, 3)
+                            self.batch.add(population_sprite, 3)
                         #except:
                         #    pass
                         return EVENT_HANDLED
 
-                        
-
-        
-        
         #explore the sector if right click and sector empty
         #influence the sector if right click and not empty
         if button == RIGHT:   
