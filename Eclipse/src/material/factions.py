@@ -49,7 +49,7 @@ def create_faction(row):
         row[24]
     )
 
-reader = csv.reader(open('data\\factions.csv'), delimiter = ';')
+reader = csv.reader(open('data/factions.csv'), delimiter = ';')
 
 #skip the first line
 reader.next()
