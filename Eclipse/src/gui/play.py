@@ -280,6 +280,7 @@ class BoardLayer(ScrollableLayer):
                 if child.get_AABB().contains(x, y):
                     if isinstance(child.obj, ResourceSlot) and button == RIGHT:
                         player = sector.get_components(InfluenceDisc)[0].owner
+                        print len(child.obj.get_components())
                         if len(child.obj.get_components()) == 1:
                             cube = child.obj.get_components()[0]
                             self.game.move(child.obj, cube.owner.personal_board.population_track, resource_type = child.obj.resource_type)
@@ -292,7 +293,7 @@ class BoardLayer(ScrollableLayer):
                                                        color = color,
                                                        scale = 0.2
                                                        )
-                            child.add(population_sprite)
+                            child.add(population_sprite,1)
                         #except:
                         #    pass
                         return EVENT_HANDLED
