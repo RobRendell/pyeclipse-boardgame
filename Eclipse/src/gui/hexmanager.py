@@ -53,6 +53,11 @@ class HexManager(object):
         y += self.y_offset
         return (x, y)
     
+    def get_rel_rect_coord_from_hex_coord(self, u, v):
+        x = self.l * u - self.l / 2.0 * v
+        y = 3.0 * self.L / 4.0 * v
+        return (x, y)
+    
     def get_planets_coord(self, u, v):
         """ get the rect coordinates to place planets as a list"""
         coords = []

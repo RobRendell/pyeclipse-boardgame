@@ -38,7 +38,7 @@ class Board(Zone):
         self.hex_grid = {} #a dictionary coord->Sector
         self.game = game
 
-    def add(self, coord, component):
+    def add(self, coord, component, rotation = 0):
         """Add the specified component to the given coordinates on the board."""
         if isinstance(component, cp.SectorTile):
             sector = Sector(component)
@@ -67,6 +67,8 @@ class Board(Zone):
                 sector.add(ResourceSlot(resource_type = 'material', advanced = 'True'))
             for dummy in range(component.n_wild):
                 sector.add(ResourceSlot())
+            #rotate the sector
+            sector.rotate(rotation)
         else:
             self.hex_grid[coord].add(component)
 
@@ -118,15 +120,16 @@ class Sector(Zone):
         self.name = sector_tile.name
         self.id = sector_tile.id
         self.victory_points = sector_tile.victory_points
+        self.artifact = sector_tile.artifact
         self.wormholes = sector_tile.wormholes
         self.rotation = 0 #define the orientation for wormholes
         
     def __str__(self):
         return 'Sector ' + self.id + ': ' + self.name
     
-    def rotate(self):
-        """Rotate the sector 60 degrees clockwise."""
-        self.rotation += 1
+    def rotate(self, n = 1):
+        """Rotate the sector n * 60 degrees clockwise. Default is 60."""
+        self.rotation += n
         self.rotation %= 6
 
 class DrawPile(Zone):

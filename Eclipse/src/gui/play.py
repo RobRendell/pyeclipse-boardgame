@@ -105,16 +105,21 @@ class BoardLayer(ScrollableLayer):
                 position = rect_position,
                 color = color)
             
-            self.batch1.add(hexa, name = str(coord))
+            batch = BatchNode()
+            batch.anchor = rect_position
+            self.add(batch, name = str(coord))
+            batch.add(hexa)
             self.hex_color_sprites[coord] = hexa
             
     def rotate_hex(self, coord):
-        rotate = Rotate(60, 1)
-        hexa = self.batch1.get(name = str(coord))
-        if not hexa.are_actions_running():
-            hexa.do(rotate)
-            for wormhole in hexa.get_children():
-                wormhole.do(rotate)
+        rotate = Rotate(60, 0.2)
+        try:
+            batch = self.get(name = str(coord))
+            if not batch.are_actions_running():
+                batch.do(rotate)
+                self.game.rotate_hex(coord)
+        except:
+            pass
         
     def display_sector(self, coord):                   
         u, v = coord
@@ -138,7 +143,8 @@ class BoardLayer(ScrollableLayer):
                               ]
         wormhole_rotations = [210, 270, 330, 30, 90, 150]
         
-        for pos, rot, is_wormhole in zip(wormhole_positions, wormhole_rotations, sector.wormholes):
+        for n, (pos, rot) in enumerate(zip(wormhole_positions, wormhole_rotations)):
+            is_wormhole = sector.wormholes[(n - sector.rotation) % 6]
             if is_wormhole:
                 abs_rect_pos = self.hex_manager.get_rect_coord_from_hex_coord(u + pos[0], v + pos[1])
                 wormhole_sprite = Sprite('wormhole.png',
@@ -147,12 +153,8 @@ class BoardLayer(ScrollableLayer):
                                          )
                 wormhole_sprite.image_anchor_y = 0
                 wormhole_sprite.rotation = rot
-                hexa = self.batch1.get(name = str(coord))
-                print hexa.anchor
                 
-                hexa.add(wormhole_sprite)
-                wormhole_sprite.anchor = wormhole_sprite.parent.anchor
-                #self.batch1.add(wormhole_sprite)
+                self.get(str(coord)).add(wormhole_sprite)
                
         #ships
         for ship in sector.get_components(Ship):
@@ -226,7 +228,15 @@ class BoardLayer(ScrollableLayer):
                            scale = 0.2)
         self.batch1.add(vp_sprite)
         
-        #artefact
+        #artifact
+        if sector.artifact:
+            artifact_sprite = Sprite('artifact.png',
+                                     position = rect_position,
+                                     scale = 0.5
+                                     )
+            artifact_sprite.x += 10
+            artifact_sprite.y += 10
+            self.batch1.add(artifact_sprite)
         
         #discovery
         if len(sector.get_components(DiscoveryTile)):
@@ -271,7 +281,8 @@ class BoardLayer(ScrollableLayer):
                     if isinstance(child.obj, ResourceSlot) and button == RIGHT:
                         player = sector.get_components(InfluenceDisc)[0].owner
                         if len(child.obj.get_components()) == 1:
-                            self.game.move(child.obj, player.personal_board.population_track, resource_type = child.obj.resource_type)
+                            cube = child.obj.get_components()[0]
+                            self.game.move(child.obj, cube.owner.personal_board.population_track, resource_type = child.obj.resource_type)
                             child.remove(child.get_children()[0])
                         else:
                             self.game.move(player.personal_board.population_track, child.obj, resource_type = child.obj.resource_type)
