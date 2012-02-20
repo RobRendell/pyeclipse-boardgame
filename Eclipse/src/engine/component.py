@@ -30,7 +30,8 @@ class SectorTile(Component):
     """An hexagon tile."""
     def __init__(self, id, name, victory_points, n_money = 0, nr_money = 0,
     n_science = 0, nr_science = 0, n_material = 0, nr_material = 0, n_wild = 0,
-    discovery = False, n_ancients = 0, artifact = False, wormholes = 1):
+    discovery = False, n_ancients = 0, artifact = False, wormhole1 = 0,
+    wormhole2 = 0, wormhole3 = 0, wormhole4 = 0, wormhole5 = 0, wormhole6 = 0,):
         self.id = id
         self.name = name
         self.victory_points = victory_points
@@ -44,8 +45,13 @@ class SectorTile(Component):
         self.discovery = discovery
         self.n_ancients = n_ancients
         self.artifact = artifact
-        self.wormholes = wormholes
-        self.components = []
+        self.wormholes = [wormhole1,
+                          wormhole2,
+                          wormhole3,
+                          wormhole4,
+                          wormhole5,
+                          wormhole6
+                          ]
 
 class TechnologyTile(Component):
     """A research tile."""

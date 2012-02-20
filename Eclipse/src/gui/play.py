@@ -23,8 +23,9 @@ from engine.component import InfluenceDisc, Ship, Interceptor, Cruiser,\
 from pyglet.window.mouse import RIGHT
 from pyglet.event import EVENT_HANDLED
 from cocos.rect import Rect
-from pyglet.window.key import B, R, _1, P
+from pyglet.window.key import B, R, _1, P, MOD_CTRL
 from cocos.batch import BatchNode
+from cocos.actions.interval_actions import RotateBy, Rotate
 
 pyglet.resource.path.append('./image')
 pyglet.resource.path.append('./image/boards')
@@ -82,8 +83,12 @@ class BoardLayer(ScrollableLayer):
         self.game = game
         self.hex_color_sprites = {}
 
-        self.batch = BatchNode()
-        self.add(self.batch)
+        self.batch1 = BatchNode()
+        self.batch2 = BatchNode()
+        self.batch3 = BatchNode()
+        self.add(self.batch1, 1)
+        self.add(self.batch2, 2)
+        self.add(self.batch3, 3)
         
         for coord in self.game.board.get_components().iterkeys():
             self.display_sector(coord)
@@ -99,20 +104,56 @@ class BoardLayer(ScrollableLayer):
                 scale = 0.85,
                 position = rect_position,
                 color = color)
-            self.add(hexa)
+            
+            self.batch1.add(hexa, name = str(coord))
             self.hex_color_sprites[coord] = hexa
+            
+    def rotate_hex(self, coord):
+        rotate = Rotate(60, 1)
+        hexa = self.batch1.get(name = str(coord))
+        if not hexa.are_actions_running():
+            hexa.do(rotate)
+            for wormhole in hexa.get_children():
+                wormhole.do(rotate)
         
     def display_sector(self, coord):                   
         u, v = coord
         sector = self.game.board.get_components()[coord]
         rect_position = self.hex_manager.get_rect_coord_from_hex_coord(u, v)
+        
         #hex_color
         try:
             color = sector.get_components(InfluenceDisc)[0].color
         except:
             color = 'grey'
         self.set_hex_color(coord, color)
+
+        #wormholes
+        wormhole_positions = [(0.5, 0.5),
+                              (0.5, 0),
+                              (0, -0.5),
+                              (-0.5, -0.5),
+                              (-0.5, 0),
+                              (0, 0.5)
+                              ]
+        wormhole_rotations = [210, 270, 330, 30, 90, 150]
         
+        for pos, rot, is_wormhole in zip(wormhole_positions, wormhole_rotations, sector.wormholes):
+            if is_wormhole:
+                abs_rect_pos = self.hex_manager.get_rect_coord_from_hex_coord(u + pos[0], v + pos[1])
+                wormhole_sprite = Sprite('wormhole.png',
+                                         position = abs_rect_pos,
+                                         scale = 0.05
+                                         )
+                wormhole_sprite.image_anchor_y = 0
+                wormhole_sprite.rotation = rot
+                hexa = self.batch1.get(name = str(coord))
+                print hexa.anchor
+                
+                hexa.add(wormhole_sprite)
+                wormhole_sprite.anchor = wormhole_sprite.parent.anchor
+                #self.batch1.add(wormhole_sprite)
+               
         #ships
         for ship in sector.get_components(Ship):
             
@@ -131,7 +172,7 @@ class BoardLayer(ScrollableLayer):
                                            position = ship_coord,
                                            color = color_convert(ship.color)
                                            )
-            self.batch.add(ship_sprite, z = 2)
+            self.batch1.add(ship_sprite)
             
         #planets
         all_slots = {None:[],
@@ -156,7 +197,7 @@ class BoardLayer(ScrollableLayer):
                                    scale = 0.05,
                                    color = color
                                    )
-            self.batch.add(planet_sprite, z = 1)
+            self.batch1.add(planet_sprite)
             x, y = position
             for slot, position in zip(slots, [(x - 10, y),(x + 10, y)]):
                 slot_picture = 'slot_wild_adv.png' if slot.advanced else 'slot_wild.png'
@@ -165,14 +206,14 @@ class BoardLayer(ScrollableLayer):
                                                position = position,
                                                color = color,
                                                scale = 0.2)
-                self.batch.add(slot_sprite, 2)
+                self.batch2.add(slot_sprite)
                 if len(slot.get_components()) == 1:
                     population_sprite = Sprite('population white.png',
                                                position = position,
                                                color = color_convert(slot.get_components()[0].color),
                                                scale = 0.2
                                                )
-                    self.batch.add(population_sprite, 3)
+                    slot_sprite.add(population_sprite)
                 
         #vp
         vp = sector.victory_points
@@ -183,7 +224,9 @@ class BoardLayer(ScrollableLayer):
         vp_sprite = Sprite(vp_picture,
                            position = rect_position,
                            scale = 0.2)
-        self.batch.add(vp_sprite, 1)
+        self.batch1.add(vp_sprite)
+        
+        #artefact
         
         #discovery
         if len(sector.get_components(DiscoveryTile)):
@@ -191,7 +234,7 @@ class BoardLayer(ScrollableLayer):
                                            position = rect_position,
                                            scale = 0.3
                                            )
-            self.batch.add(discovery_tile_sprite, 2)
+            self.batch2.add(discovery_tile_sprite)
         
         #ancients and gdc (npc)
         n_ancients = len(sector.get_components(AncientShip))
@@ -202,30 +245,34 @@ class BoardLayer(ScrollableLayer):
                                     )
             ancient_sprite.x +=  20.0 * (n - (1.0 * n / n_ancients))
             ancient_sprite.y +=  20.0 * (n - (1.0 * n / n_ancients))
-            self.batch.add(ancient_sprite, 3)
+            self.batch3.add(ancient_sprite)
         if len(sector.get_components(GalacticCenterDefenseSystem)):
             gdc_sprite = Sprite('gdc.png',
                                 position = rect_position,
                                 scale = 0.3
                                 )
-            self.batch.add(gdc_sprite, 3)
+            self.batch3.add(gdc_sprite)
 
     def on_mouse_press (self, x, y, button, modifiers):               
         x, y = self.scroller.pixel_from_screen(x,y)
         hex_u, hex_v = self.hex_manager.get_hex_from_rect_coord(x, y)
-        coord = (hex_u, hex_v)
+        coord = (hex_u, hex_v)        
         
         sector = self.game.board.get_components(coord, Sector)
+
+        if modifiers & MOD_CTRL:
+            self.rotate_hex(coord)
+            return EVENT_HANDLED
         
         #Selectable sprite
-        for child in self.batch.get_children():            
+        for child in self.batch1.get_children() + self.batch2.get_children() + self.batch3.get_children():            
             if isinstance(child, SelectableSprite):
                 if child.get_AABB().contains(x, y):
                     if isinstance(child.obj, ResourceSlot) and button == RIGHT:
                         player = sector.get_components(InfluenceDisc)[0].owner
                         if len(child.obj.get_components()) == 1:
                             self.game.move(child.obj, player.personal_board.population_track, resource_type = child.obj.resource_type)
-                            self.batch.remove(child)
+                            child.remove(child.get_children()[0])
                         else:
                             self.game.move(player.personal_board.population_track, child.obj, resource_type = child.obj.resource_type)
                             color = color_convert(player.color)
@@ -234,7 +281,7 @@ class BoardLayer(ScrollableLayer):
                                                        color = color,
                                                        scale = 0.2
                                                        )
-                            self.batch.add(population_sprite, 3)
+                            child.add(population_sprite)
                         #except:
                         #    pass
                         return EVENT_HANDLED

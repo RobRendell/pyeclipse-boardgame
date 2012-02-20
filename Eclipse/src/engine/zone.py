@@ -118,9 +118,16 @@ class Sector(Zone):
         self.name = sector_tile.name
         self.id = sector_tile.id
         self.victory_points = sector_tile.victory_points
+        self.wormholes = sector_tile.wormholes
+        self.rotation = 0 #define the orientation for wormholes
         
     def __str__(self):
         return 'Sector ' + self.id + ': ' + self.name
+    
+    def rotate(self):
+        """Rotate the sector 60 degrees clockwise."""
+        self.rotation += 1
+        self.rotation %= 6
 
 class DrawPile(Zone):
     def __init__(self, components):

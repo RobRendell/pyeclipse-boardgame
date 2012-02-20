@@ -1,6 +1,5 @@
 from engine.component import SectorTile
 import csv
-import os.path
 
 __author__="jglouis"
 __date__ ="$Dec 21, 2011 3:31:15 PM$"
@@ -28,7 +27,12 @@ def create_sector_tile(row):
         int(row[10]),
         int(row[11]),
         int(row[12]),
-        int(row[13])
+        int(row[13]),
+        int(row[14]),
+        int(row[15]),
+        int(row[16]),
+        int(row[17]),
+        int(row[18])
     )
 
 reader = csv.reader(open('data/sectortiles.csv'), delimiter = ';')
