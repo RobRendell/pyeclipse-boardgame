@@ -31,7 +31,7 @@ setup(
     version = '0.1',
     description = 'Eclipse Cx_Freeze Build',
     author = 'jglouis',
-    name = 'cx_Freeze Sample File',
+    name = 'pyEclipse',
     
     options = {'build_exe': {'path':path,
                              'includes': includes,

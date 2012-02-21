@@ -280,7 +280,6 @@ class BoardLayer(ScrollableLayer):
                 if child.get_AABB().contains(x, y):
                     if isinstance(child.obj, ResourceSlot) and button == RIGHT:
                         player = sector.get_components(InfluenceDisc)[0].owner
-                        print len(child.obj.get_components())
                         if len(child.obj.get_components()) == 1:
                             cube = child.obj.get_components()[0]
                             self.game.move(child.obj, cube.owner.personal_board.population_track, resource_type = child.obj.resource_type)
@@ -294,8 +293,6 @@ class BoardLayer(ScrollableLayer):
                                                        scale = 0.2
                                                        )
                             child.add(population_sprite,1)
-                        #except:
-                        #    pass
                         return EVENT_HANDLED
 
         #explore the sector if right click and sector empty
@@ -395,10 +392,11 @@ class PlayerBoardLayer(Layer):
                         ('_terran' if 'terran' in player.faction.name else '_alien') +\
                         '.jpg'
         player_board_sprite = BackgroundSprite(picture_name,
-                                     scale = 0.95,
                                      position = position                              
                                      )
         self.add(player_board_sprite)
+        scale_ratio = min(1.0 * width / player_board_sprite.image.width, 1.0 * height / player_board_sprite.image.height)
+        player_board_sprite.scale = scale_ratio
         #defining the rectangular zone
         self.rect_player_board = player_board_sprite.get_AABB()
         #width, heigth = self.rect_player_board.size ----> bug ?
