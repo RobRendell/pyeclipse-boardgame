@@ -395,8 +395,7 @@ class PlayerBoardLayer(Layer):
                                      position = position                              
                                      )
         self.add(player_board_sprite)
-        scale_ratio = min(1.0 * width / player_board_sprite.image.width, 1.0 * height / player_board_sprite.image.height)
-        player_board_sprite.scale = scale_ratio
+        self.scale = min(1.0 * width / player_board_sprite.image.width, 1.0 * height / player_board_sprite.image.height)
         #defining the rectangular zone
         self.rect_player_board = player_board_sprite.get_AABB()
         #width, heigth = self.rect_player_board.size ----> bug ?
@@ -434,7 +433,7 @@ class PlayerBoardLayer(Layer):
             influence_sprite = Sprite('influence white.png',
                                       position = position,
                                       color = self.color,
-                                      scale = 0.8)
+                                      scale =  0.9)
             self.add(influence_sprite, 2)
             
         #population track(s)
