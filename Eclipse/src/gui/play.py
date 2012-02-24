@@ -25,7 +25,7 @@ from pyglet.event import EVENT_HANDLED
 from cocos.rect import Rect
 from pyglet.window.key import B, R, _1, P, MOD_CTRL
 from cocos.batch import BatchNode
-from cocos.actions.interval_actions import RotateBy, Rotate
+from cocos.actions.interval_actions import Rotate
 
 pyglet.resource.path.append('./image')
 pyglet.resource.path.append('./image/boards')
@@ -64,7 +64,28 @@ class SelectableSprite(Sprite):
         self.obj = obj
         
 class BackgroundSprite(Sprite):
-    pass       
+    pass   
+
+class PopUpLayer(Layer):
+    """
+    A Layer containing a pop up sprite asking the player to make a choice
+    between a certain number of options. The options are SelectableSprite
+    objects.
+    """
+    def __init__(self, rect, *args):
+        """
+        Create a PopUpLayer instance containing a pop window. Dimension and positionning
+        of the window are given by rect coordinates (rect must be a cocos.rect.Rect object).
+        Subsequent parameters of the function should be instances of SelectableSprite.
+        """
+        super(PopUpLayer, self).__init__()
+        self.draw_rect(rect)
+        
+    def draw_rect(self, rect):
+        self.add(Line(rect.topleft, rect.topright, (255, 255, 255, 255), 3))
+        self.add(Line(rect.topright, rect.bottomright, (255, 255, 255, 255), 3))
+        self.add(Line(rect.bottomright, rect.bottomleft, (255, 255, 255, 255), 3))
+        self.add(Line(rect.bottomleft, rect.topleft, (255, 255, 255, 255), 3))
         
 class BoardLayer(ScrollableLayer):
     is_event_handler = True
@@ -263,8 +284,8 @@ class BoardLayer(ScrollableLayer):
                                 )
             self.batch3.add(gdc_sprite)
 
-    def on_mouse_press (self, x, y, button, modifiers):               
-        x, y = self.scroller.pixel_from_screen(x,y)
+    def on_mouse_press(self, screen_x, screen_y, button, modifiers):               
+        x, y = self.scroller.pixel_from_screen(screen_x, screen_y)
         hex_u, hex_v = self.hex_manager.get_hex_from_rect_coord(x, y)
         coord = (hex_u, hex_v)        
         
@@ -278,13 +299,19 @@ class BoardLayer(ScrollableLayer):
         for child in self.batch1.get_children() + self.batch2.get_children() + self.batch3.get_children():            
             if isinstance(child, SelectableSprite):
                 if child.get_AABB().contains(x, y):
-                    if isinstance(child.obj, ResourceSlot) and button == RIGHT:
-                        player = sector.get_components(InfluenceDisc)[0].owner
+                    if isinstance(child.obj, ResourceSlot) and button == RIGHT:                        
+                        #if it is a wild resource slot, then ask the player which material it is
+                        if child.obj.resource_type is None:
+                            scene = self.get_ancestor(Scene)
+                            pop_up_layer = PopUpLayer(Rect(screen_x + 20, screen_y + 20, 150, 60))
+                            scene.add(pop_up_layer, 10)
+                        
                         if len(child.obj.get_components()) == 1:
                             cube = child.obj.get_components()[0]
                             self.game.move(child.obj, cube.owner.personal_board.population_track, resource_type = child.obj.resource_type)
                             child.remove(child.get_children()[0])
                         else:
+                            player = sector.get_components(InfluenceDisc)[0].owner
                             self.game.move(player.personal_board.population_track, child.obj, resource_type = child.obj.resource_type)
                             color = color_convert(player.color)
                             population_sprite = Sprite('population white.png',
