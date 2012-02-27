@@ -19,7 +19,7 @@ from cocos.actions.base_actions import IntervalAction
 import random
 from engine.zone import Sector, ResourceSlot
 from engine.component import InfluenceDisc, Ship, Interceptor, Cruiser,\
-    AncientShip, GalacticCenterDefenseSystem, DiscoveryTile
+    AncientShip, GalacticCenterDefenseSystem, DiscoveryTile, PopulationCube
 from pyglet.window.mouse import RIGHT
 from pyglet.event import EVENT_HANDLED
 from cocos.rect import Rect
@@ -36,56 +36,49 @@ pyglet.resource.path.append('./image/research_tiles')
 pyglet.resource.path.append('./image/npc')
 pyglet.resource.path.append('./image/ships')
 pyglet.resource.path.append('./font')
-#pyglet.resource.path.append('./gui')
 pyglet.resource.reindex()
 
 pyglet.font.add_directory('font')
     
 def color_convert(text):
-    if text == 'blank':
-        return (255,255,255)
-    if text == 'red':
-        return (255,0,0)
-    if text == 'green':
-        return (0,255,0)
-    if text == 'blue':
-        return (0,0,255)
-    if text == 'yellow':
-        return (255,255,0)
-    if text == 'black':
-        return (50,50,50)
-    if text == 'grey':
-        return (150,150,150)
-
+    return {'blank'     :(255,255,255),
+            'red'       :(255,0,0), 
+            'green'     :(0,255,0),  
+            'blue'      :(0,0,255), 
+            'yellow'    :(255,255,0),
+            'grey'      :(150,150,150),
+            'black'     :(50,50,50),
+            'money'     :(212,100,4),
+            'material'  :(136,72,41),
+            'science'   :(230,146,161),
+            None        :(255,255,255)
+            }[text]
 
 class SelectableSprite(Sprite):
+    """
+    A sprite that is linked to a zone/component of the game.
+    The zone/component object is the obj variable of the sprite.
+    """
     def __init__(self, obj, *args, **kwargs):
         super(SelectableSprite, self).__init__(*args, **kwargs)
         self.obj = obj
         
+class PopUpSprite(Sprite):
+    def __init__(self, *args, **kwargs):
+        #extract all the selectable sprite from *args
+        selectable_sprites = filter(lambda x : isinstance(x, SelectableSprite), args)
+        args = filter(lambda x : not isinstance(x, SelectableSprite), args)
+        
+        args = [el for el in args if not isinstance(el, SelectableSprite)]
+        super(PopUpSprite, self).__init__('tech_background.png', *args, **kwargs)
+        
+
+        for n, sprite in enumerate(selectable_sprites):
+            self.add(sprite)
+            sprite.x = n * 30
+        
 class BackgroundSprite(Sprite):
     pass   
-
-class PopUpLayer(Layer):
-    """
-    A Layer containing a pop up sprite asking the player to make a choice
-    between a certain number of options. The options are SelectableSprite
-    objects.
-    """
-    def __init__(self, rect, *args):
-        """
-        Create a PopUpLayer instance containing a pop window. Dimension and positionning
-        of the window are given by rect coordinates (rect must be a cocos.rect.Rect object).
-        Subsequent parameters of the function should be instances of SelectableSprite.
-        """
-        super(PopUpLayer, self).__init__()
-        self.draw_rect(rect)
-        
-    def draw_rect(self, rect):
-        self.add(Line(rect.topleft, rect.topright, (255, 255, 255, 255), 3))
-        self.add(Line(rect.topright, rect.bottomright, (255, 255, 255, 255), 3))
-        self.add(Line(rect.bottomright, rect.bottomleft, (255, 255, 255, 255), 3))
-        self.add(Line(rect.bottomleft, rect.topleft, (255, 255, 255, 255), 3))
         
 class BoardLayer(ScrollableLayer):
     is_event_handler = True
@@ -209,11 +202,7 @@ class BoardLayer(ScrollableLayer):
         for resource_type, slots in all_slots.iteritems():
             if len(slots) == 0:
                 continue
-            color = {None       :(255,255,255),
-                     'money'    :(212,100,4),
-                     'material' :(136,72,41),
-                     'science'  :(230,146,161)
-                     }[resource_type]
+            color = color_convert(resource_type)
             position = self.hex_manager.get_sprite_coord(u, v)         
             planet_sprite = Sprite('planet.png',
                                    position = position,
@@ -302,9 +291,13 @@ class BoardLayer(ScrollableLayer):
                     if isinstance(child.obj, ResourceSlot) and button == RIGHT:                        
                         #if it is a wild resource slot, then ask the player which material it is
                         if child.obj.resource_type is None:
-                            scene = self.get_ancestor(Scene)
-                            pop_up_layer = PopUpLayer(Rect(screen_x + 20, screen_y + 20, 150, 60))
-                            scene.add(pop_up_layer, 10)
+                            pop_up_sprite = PopUpSprite(SelectableSprite(PopulationCube(), 'population white.png', scale = 0.2, color = color_convert('money')),
+                                                        SelectableSprite(PopulationCube(), 'population white.png', scale = 0.2, color = color_convert('science')),
+                                                        SelectableSprite(PopulationCube(), 'population white.png', scale = 0.2, color = color_convert('material')),
+                                                        position = (x+30, y+30),
+                                                        anchor = (0,0))
+                            self.add(pop_up_sprite, 10)
+                            return EVENT_HANDLED
                         
                         if len(child.obj.get_components()) == 1:
                             cube = child.obj.get_components()[0]

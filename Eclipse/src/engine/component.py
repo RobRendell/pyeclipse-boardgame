@@ -199,6 +199,9 @@ class InfluenceDisc(PersonalComponent):
         self.color = owner.color
 
 class PopulationCube(PersonalComponent):
-    def __init__(self, owner):
+    def __init__(self, owner = None):
         super(PopulationCube, self).__init__(owner)
-        self.color = owner.color
+        if owner is None:
+            self.color = None
+        else:
+            self.color = owner.color

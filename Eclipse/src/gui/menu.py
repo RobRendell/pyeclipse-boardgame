@@ -13,6 +13,9 @@ from cocos.particle import ParticleSystem, Color
 from cocos.euclid import Point2
 import pyglet
 
+pyglet.resource.path.append('../image')
+pyglet.resource.reindex()
+
 class MainMenu(Menu):
     def __init__(self):
         super(MainMenu, self).__init__('ECLIPSE')
