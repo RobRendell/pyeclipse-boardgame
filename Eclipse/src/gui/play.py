@@ -26,6 +26,8 @@ from cocos.rect import Rect
 from pyglet.window.key import B, R, _1, P, MOD_CTRL
 from cocos.batch import BatchNode
 from cocos.actions.interval_actions import Rotate
+from cocos.menu import Menu, MenuItem, zoom_in, zoom_out, shake, ColorMenuItem, fixedPositionMenuLayout, LEFT, TOP,\
+    BOTTOM, verticalMenuLayout
 
 pyglet.resource.path.append('./image')
 pyglet.resource.path.append('./image/boards')
@@ -64,21 +66,66 @@ class SelectableSprite(Sprite):
         self.obj = obj
         
 class PopUpSprite(Sprite):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, game, board_layer, resource_slot_sprite, player):
         #extract all the selectable sprite from *args
-        selectable_sprites = filter(lambda x : isinstance(x, SelectableSprite), args)
-        args = filter(lambda x : not isinstance(x, SelectableSprite), args)
+        super(PopUpSprite, self).__init__('tech_background.png', anchor = (0,0), scale = 2)
         
-        args = [el for el in args if not isinstance(el, SelectableSprite)]
-        super(PopUpSprite, self).__init__('tech_background.png', *args, **kwargs)
-        
-
-        for n, sprite in enumerate(selectable_sprites):
-            self.add(sprite)
-            sprite.x = n * 30
+        self.add(PopulationChoiceMenu(game, board_layer, resource_slot_sprite, player))        
         
 class BackgroundSprite(Sprite):
     pass   
+
+class PopulationChoiceMenu(Menu):
+    def __init__(self, game, board_layer, resource_slot_sprite, player):
+        super(PopulationChoiceMenu, self).__init__()
+        items = [
+                 MenuItem('money',     self.on_money),
+                 MenuItem('material',  self.on_material),
+                 MenuItem('science',   self.on_science)
+                 ]
+        
+        self.menu_valign = BOTTOM
+        self.menu_halign = LEFT
+        
+        self.game = game
+        self.board_layer = board_layer
+        self.resource_slot_sprite = resource_slot_sprite
+        self.player = player
+        
+        self.create_menu(items, layout_strategy=verticalMenuLayout)
+        
+    def decorator(f):
+        def new_f(self):
+            if len(self.resource_slot_sprite.obj.get_components()) == 1: #remove population cube                
+                cube = self.resource_slot_sprite.obj.get_components()[0]
+                self.game.move(self.resource_slot_sprite.obj, cube.owner.personal_board.population_track, resource_type = f(self))
+                self.resource_slot_sprite.remove(self.resource_slot_sprite.get_children()[0])             
+            else:          
+                self.game.move(self.player.personal_board.population_track, self.resource_slot_sprite.obj, resource_type = f(self))
+                color = color_convert(self.player.color)
+                population_sprite = Sprite('population white.png',
+                                                               position = self.resource_slot_sprite.position,
+                                                               color = color,
+                                                               scale = 0.2
+                                                               )
+                self.resource_slot_sprite.add(population_sprite,1)       
+            self.kill()      
+        return new_f
+    
+    @decorator
+    def on_money(self):        
+        return 'money'
+    
+    @decorator   
+    def on_material(self):
+        return 'material'
+    
+    @decorator
+    def on_science(self):
+        return 'science'
+        
+    def on_quit(self):
+        pyglet.app.exit()
         
 class BoardLayer(ScrollableLayer):
     is_event_handler = True
@@ -288,18 +335,16 @@ class BoardLayer(ScrollableLayer):
         for child in self.batch1.get_children() + self.batch2.get_children() + self.batch3.get_children():            
             if isinstance(child, SelectableSprite):
                 if child.get_AABB().contains(x, y):
-                    if isinstance(child.obj, ResourceSlot) and button == RIGHT:                        
+                    if isinstance(child.obj, ResourceSlot) and button == RIGHT and len(sector.get_components(InfluenceDisc)):                        
                         #if it is a wild resource slot, then ask the player which material it is
                         if child.obj.resource_type is None:
-                            pop_up_sprite = PopUpSprite(SelectableSprite(PopulationCube(), 'population white.png', scale = 0.2, color = color_convert('money')),
-                                                        SelectableSprite(PopulationCube(), 'population white.png', scale = 0.2, color = color_convert('science')),
-                                                        SelectableSprite(PopulationCube(), 'population white.png', scale = 0.2, color = color_convert('material')),
-                                                        position = (x+30, y+30),
-                                                        anchor = (0,0))
-                            self.add(pop_up_sprite, 10)
-                            return EVENT_HANDLED
+                            player = sector.get_components(InfluenceDisc)[0].owner
+                            popup = PopulationChoiceMenu(self.game, self, child, player)                                                        
+                            popup.position = self.get_ancestor(ScrollingManager).pixel_to_screen(x, y)                            
+                            popup_layer = self.get_ancestor(BoardScene).popup_layer                                                        
+                            popup_layer.add(popup)
                         
-                        if len(child.obj.get_components()) == 1:
+                        elif len(child.obj.get_components()) == 1: #remove population cube
                             cube = child.obj.get_components()[0]
                             self.game.move(child.obj, cube.owner.personal_board.population_track, resource_type = child.obj.resource_type)
                             child.remove(child.get_children()[0])
@@ -339,9 +384,7 @@ class BoardLayer(ScrollableLayer):
             self.info_layer.set_info(str(sector))
         else:
             self.info_layer.set_info('Unknown Sector')
-        
-        self.game.end_turn()             
-        
+                
     def on_mouse_motion(self, x, y, dx, dy):    
         x, y = self.scroller.pixel_from_screen(x,y)
         hex_u, hex_v = self.hex_manager.get_hex_from_rect_coord(x, y)
@@ -350,8 +393,6 @@ class BoardLayer(ScrollableLayer):
             if isinstance(child, Line):
                 child.kill()
         self.add_hex((hex_x, hex_y), self.hex_width / 2)
-        #self.add(Line((500,500),(600,500), (255,255,255,255), 3))
-        
         
     def add_hex(self, centre, r):        
         hex_coord = []
@@ -380,9 +421,6 @@ class BoardLayer(ScrollableLayer):
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
         self.scroller.scale += scroll_y * 0.1
         self.scroller.scale = min(max(self.scroller.scale, 0.2), 2)
-                
-    def on_key_press(self, key, modifiers):
-        pass
         
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers ):
         fx, fy = self.scroller.fx, self.scroller.fy
@@ -564,7 +602,7 @@ class ControlLayer(Layer):
             
     def add_scene(self, scene, key):
         """
-        Add a new scene to the control layer that may be diiplayed by pressing
+        Add a new scene to the control layer that may be displayed by pressing
         the corresponding key button.
         the key must be an integer corresponding to a pyglet key from
         pyglet.window.key.
@@ -615,6 +653,13 @@ class ActionLayer(Layer):
         self.action_position = [0.2, 1.12, 2.05, 3, 3.95, 4.9]
         self.selection_sprite = Sprite('action_selection_halo.png', scale = 0.3, position = self.action_board_sprite.position)
         
+        self.turn_button = Sprite('turn_button.png', 
+                                  anchor = (0,0),
+                                  color = color_convert(game.current_player.color)
+                                  )
+        
+        self.add(self.turn_button)
+
     def on_mouse_press(self, x, y, button, modifiers): 
         rect = self.action_board_sprite.get_AABB()        
         x, y = director.get_virtual_coordinates(x, y)
@@ -627,19 +672,63 @@ class ActionLayer(Layer):
                     self.selection_sprite.x = rect.left + (self.action_position[n] + 0.5) * dx 
                     self.selection_sprite.color = color_convert(self.game.current_player.color)
                     return EVENT_HANDLED
+                
+        elif self.turn_button.get_AABB().contains(x, y):
+            self.game.end_turn()
+            self.turn_button.color = color_convert(self.game.current_player.color)
+            return EVENT_HANDLED
                    
+class PopUpLayer(Layer):
+    """
+    Layer that is meant to contain pop up menus. When a pop up menu appears, all keypad/mouse events are intercepted
+    and won't be propagated to the lower layers.
+    """
+    is_event_handler = True
+    def __init__(self, game):
+        super(PopUpLayer, self).__init__()
+        self.game = game
+        self.is_active = False #will be set to True if a pop up appears. This variable is used to test if the events are to be propagated through the lower layers
+        
+    def add(self, child, z=0, name=None):
+        super(PopUpLayer, self).add(child, z, name)
+        self.is_active = True
+        
+    def remove(self, obj):
+        super(PopUpLayer, self).remove(obj)
+        if not len(self.get_children()):
+            self.is_active = False
+        
+    def on_mouse_press(self, *args):
+        if self.is_active:
+            return EVENT_HANDLED
+    
+    def on_mouse_motion(self, *args):
+        if self.is_active:
+            return EVENT_HANDLED
+        
+    def on_mouse_scroll(self, *args):
+        if self.is_active:
+            return EVENT_HANDLED
+        
+    def on_mouse_drag(self, *args):
+        if self.is_active:
+            return EVENT_HANDLED            
+  
 class BoardScene(Scene):
     def __init__(self, game):
         super(BoardScene, self).__init__()
         self.add(ColorLayer(0,0,0,255), 0)
         scroller = ScrollingManager()        
         self.info_layer = InfoLayer()
-        action_layer = ActionLayer(game)
-        scroller.add(BoardLayer(scroller, self.info_layer, game))
-        self.add(scroller)
+        self.action_layer = ActionLayer(game)
+        self.popup_layer = PopUpLayer(game)
+        self.board_layer = BoardLayer(scroller, self.info_layer, game)
+        scroller.add(self.board_layer)
+        self.add(scroller, 1)
         #self.add(control_layer, 2)
         self.add(self.info_layer, 3)
-        self.add(action_layer, 4)
+        self.add(self.action_layer, 4)
+        self.add(self.popup_layer, 5)
         
 class PlayerBoardScene(Scene):
     def __init__(self, player):
@@ -690,6 +779,3 @@ class InfoAction(IntervalAction):
         self.current_text = self.word[0:current_text_size]
         self.current_text += self.post_text
         self.target.element.text = self.current_text
-        
-    def __reversed__(self):
-        pass
