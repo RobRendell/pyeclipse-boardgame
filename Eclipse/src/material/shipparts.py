@@ -16,7 +16,7 @@ def create_ship_part_tile(row):
         int(row[4]),
         int(row[5]),
         int(row[6]),
-        bool(row[7]),
+        row[7] == 'True',
         int(row[8]),
         int(row[9]),
         int(row[10]),

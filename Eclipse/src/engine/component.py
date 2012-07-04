@@ -11,7 +11,7 @@ class Component(object):
         pass
 
 class PersonalComponent(Component):
-    """A PersonnalComponent is a component with one owner."""
+    """A PersonalComponent is a component with one owner."""
     def __init__(self, owner):
         self.owner = owner
         
@@ -181,17 +181,29 @@ class Ship(PersonalComponent):
         super(Ship, self).__init__(owner)
         self.color = owner.color
         
+    def get_stats(self):
+        """return the stats of the ship"""        
+        return self.owner.personal_board.blueprints.get_stats(self.name)
+        
 class Interceptor(Ship):
-    pass
+    def __init__(self, owner):
+        super(Interceptor, self).__init__(owner)
+        self.name = 'interceptor'
 
 class Cruiser(Ship):
-    pass
+    def __init__(self, owner):
+        super(Cruiser, self).__init__(owner)
+        self.name = 'cruiser'
 
 class Dreadnought(Ship):
-    pass
+    def __init__(self, owner):
+        super(Dreadnought, self).__init__(owner)
+        self.name = 'dreadnought'
 
 class Starbase(Ship):
-    pass
+    def __init__(self, owner):
+        super(Starbase, self).__init__(owner)
+        self.name = 'starbase'
 
 class InfluenceDisc(PersonalComponent):
     def __init__(self, owner):

@@ -359,6 +359,9 @@ class BoardLayer(ScrollableLayer):
                                                        )
                             child.add(population_sprite,1)
                         return EVENT_HANDLED
+                    
+                    elif isinstance(child.obj, Ship):
+                        print child.obj.get_stats()
 
         #explore the sector if right click and sector empty
         #influence the sector if right click and not empty
@@ -379,11 +382,13 @@ class BoardLayer(ScrollableLayer):
                 player = sector.get_components(InfluenceDisc)[0].owner
                 self.game.move(sector, player.personal_board.influence_track, component_type = InfluenceDisc)
                 self.set_hex_color(coord, 'grey')
-                self.info_layer.set_info('Influence removed from Sector')          
+                self.info_layer.set_info('Influence removed from Sector')                
         elif sector is not None:
             self.info_layer.set_info(str(sector))
         else:
             self.info_layer.set_info('Unknown Sector')
+            
+        return EVENT_HANDLED
                 
     def on_mouse_motion(self, x, y, dx, dy):    
         x, y = self.scroller.pixel_from_screen(x,y)
