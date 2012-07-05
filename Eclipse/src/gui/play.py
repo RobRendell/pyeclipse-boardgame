@@ -362,6 +362,8 @@ class BoardLayer(ScrollableLayer):
                     
                     elif isinstance(child.obj, Ship):
                         print child.obj.get_stats()
+                        self.hud_layer.update_fleet([child.obj])
+                        
 
         #explore the sector if right click and sector empty
         #influence the sector if right click and not empty
@@ -657,20 +659,26 @@ class HudLayer(Layer):
         
         #fleet manager
         fleet_manager_size = (919, 1252)
-        fleet_manager_frame = Sprite('fleet_manager.png', (director.get_window_size()[0],director.get_window_size()[1]), scale = 0.5, anchor = fleet_manager_size )
-        self.add(fleet_manager_frame)
-
-        scale = 0.7
-        interceptor_sprite = Sprite('interceptor.png', (-fleet_manager_size[0] + 200, -250), scale = scale, color = color_convert('red'))
-        cruiser_sprite = Sprite('cruiser.png',         (-fleet_manager_size[0] + 200, -550), scale = scale, color = color_convert('red'))        
-        dreadnought_sprite = Sprite('dreadnought.png', (-fleet_manager_size[0] + 200, -850), scale = scale, color = color_convert('red'))        
-        starbase_sprite = Sprite('starbase white.png', (-fleet_manager_size[0] + 200, -1150), scale = scale, color = color_convert('red'))
+        self.fleet_manager_frame = Sprite('fleet_manager.png', (director.get_window_size()[0],director.get_window_size()[1]), scale = 0.5, anchor = fleet_manager_size )
+        self.add(self.fleet_manager_frame)
         
+    def update_fleet(self, ships):
+        #refresh the frame
+        for child in self.fleet_manager_frame.get_children():
+            child.kill()
         
-        fleet_manager_frame.add(interceptor_sprite)
-        fleet_manager_frame.add(cruiser_sprite)
-        fleet_manager_frame.add(dreadnought_sprite)
-        fleet_manager_frame.add(starbase_sprite)
+        #get all the owners
+        owners = set([ship.owner for ship in ships])
+        for owner in owners:        
+            ship_types = set([ship.name for ship in ships if ship.owner is owner])
+            for n, ship_type in enumerate(ship_types):               
+            
+                scale = 0.7
+                fleet_manager_size = (919, 1252)
+                y_pos = -250 - 300 * n
+                ship_sprite = Sprite(ship_type + '.png', (-fleet_manager_size[0] + 200, y_pos), scale = scale, color = color_convert(owner.color))   
+                
+                self.fleet_manager_frame.add(ship_sprite)
 
     def update_time(self, dt):
         new_color = [0, random.randint(230,255), 0, 255]       
