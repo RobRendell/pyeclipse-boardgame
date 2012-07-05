@@ -277,13 +277,45 @@ class BlueprintBoard(Zone):
         elif owner.faction.name == 'planta':
             self.base_stats['interceptor']['energy'] = 2
             self.base_stats['interceptor']['computer'] = 1
+            self.base_stats['interceptor']['initiative'] = 0
             self.base_stats['cruiser']['energy'] = 2
             self.base_stats['cruiser']['computer'] = 1
+            self.base_stats['cruiser']['initiative'] = 0
             self.base_stats['dreadnought']['energy'] = 2
             self.base_stats['dreadnought']['computer'] = 1
             self.base_stats['starbase']['initiative'] = 2
             self.base_stats['starbase']['energy'] = 5
             self.base_stats['starbase']['computer'] = 1
+            
+            self.ship_blueprints_default = {
+                    'interceptor':[
+                        s.get('ion cannon'),
+                        s.get('nuclear source'),
+                        s.get('nuclear drive')
+                    ],
+                    'cruiser':[
+                        s.get('hull'),
+                        s.get('ion cannon'),
+                        s.get('nuclear source'),
+                        None,
+                        s.get('nuclear drive')
+                    ],
+                    'dreadnought':[
+                        s.get('ion cannon'),
+                        s.get('hull'),
+                        s.get('hull'),
+                        s.get('nuclear source'),
+                        s.get('ion cannon'),
+                        None,
+                        s.get('nuclear drive')
+                    ],
+                    'starbase':[
+                        s.get('hull'),
+                        s.get('ion cannon'),
+                        s.get('hull'),
+                        s.get('electron computer')
+                    ]
+                }          
             
     def get_stats(self, ship_name):
         """Calculate the blueprint statistics for one particular ship type."""

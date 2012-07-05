@@ -129,7 +129,7 @@ class PopulationChoiceMenu(Menu):
         
 class BoardLayer(ScrollableLayer):
     is_event_handler = True
-    def __init__(self, scroller, info_layer, game):
+    def __init__(self, scroller, hud_layer, game):
         self.px_width = 6000
         self.px_height = 6000
         super(BoardLayer, self).__init__()
@@ -140,7 +140,7 @@ class BoardLayer(ScrollableLayer):
         self.hex_manager = HexManager(self.hex_width, (self.px_width / 2, self.px_height / 2))
         self.scroller = scroller
         self.scroller.set_focus(self.px_width / 2, self.px_height / 2)
-        self.info_layer = info_layer
+        self.hud_layer = hud_layer
         self.game = game
         self.hex_color_sprites = {}
 
@@ -370,23 +370,23 @@ class BoardLayer(ScrollableLayer):
                 sector_tile = self.game.draw_hex(coord)
                 if sector_tile is not None:
                     self.game.place_hex(sector_tile, coord)
-                    self.info_layer.set_info('New Sector discovered: ' + sector_tile.name)
+                    self.hud_layer.set_info('New Sector discovered: ' + sector_tile.name)
                     self.display_sector(coord)
                 else:
-                    self.info_layer.set_info('No New Sector to explore -Aborting')
+                    self.hud_layer.set_info('No New Sector to explore -Aborting')
             elif len(sector.get_components(InfluenceDisc)) == 0:                                             
                 self.game.move(self.game.current_player.personal_board.influence_track, sector)
                 self.set_hex_color(coord, self.game.current_player.color)
-                self.info_layer.set_info('Influence on sector '+ sector.name)
+                self.hud_layer.set_info('Influence on sector '+ sector.name)
             else:
                 player = sector.get_components(InfluenceDisc)[0].owner
                 self.game.move(sector, player.personal_board.influence_track, component_type = InfluenceDisc)
                 self.set_hex_color(coord, 'grey')
-                self.info_layer.set_info('Influence removed from Sector')                
+                self.hud_layer.set_info('Influence removed from Sector')                
         elif sector is not None:
-            self.info_layer.set_info(str(sector))
+            self.hud_layer.set_info(str(sector))
         else:
-            self.info_layer.set_info('Unknown Sector')
+            self.hud_layer.set_info('Unknown Sector')
             
         return EVENT_HANDLED
                 
@@ -615,36 +615,13 @@ class ControlLayer(Layer):
         """
         self.scenes[key] = scene
         scene.add(self)
-    
-class InfoLayer(Layer):
-    def __init__(self):
-        super(InfoLayer, self).__init__()
-        self.base_color = (0, 205, 0, 200)
-        self.info = Label('', 
-                          (0, director.get_window_size()[1] - 50),
-                          font_name = 'Estrogen',
-                          font_size = 15,
-                          color = self.base_color,
-                          width = 1000,
-                          multiline = True)
-        self.add(self.info)
         
-        self.schedule_interval(self.update_time, .1)
-
-    def update_time(self, dt):
-        new_color = [0, random.randint(230,255), 0, 255]       
-        self.info.element.color = new_color
-        
-    def set_info(self, text):
-        self.info.do(InfoAction(text, '_', 0.4))
-        
-class ActionLayer(Layer):
+class HudLayer(Layer):
     is_event_handler = True
     def __init__(self, game):
-        super(ActionLayer, self).__init__()
+        super(HudLayer, self).__init__()
         self.game = game
         self.action_board_sprite = Sprite('action_board_terran.png', scale = 0.3)
-        #self.action_board_sprite.transform_anchor = (1,100000)
         self.add(self.action_board_sprite)
         self.action_board_sprite.position = self.action_board_sprite.get_AABB().topleft
         self.action_board_sprite.x += director.get_window_size()[0]
@@ -664,6 +641,43 @@ class ActionLayer(Layer):
                                   )
         
         self.add(self.turn_button)
+                
+        #message        
+        self.base_color = (0, 205, 0, 200)
+        self.info = Label('', 
+                          (0, director.get_window_size()[1] - 50),
+                          font_name = 'Estrogen',
+                          font_size = 15,
+                          color = self.base_color,
+                          width = 1000,
+                          multiline = True)
+        self.add(self.info)
+        
+        self.schedule_interval(self.update_time, .1)
+        
+        #fleet manager
+        fleet_manager_size = (919, 1252)
+        fleet_manager_frame = Sprite('fleet_manager.png', (director.get_window_size()[0],director.get_window_size()[1]), scale = 0.5, anchor = fleet_manager_size )
+        self.add(fleet_manager_frame)
+
+        scale = 0.7
+        interceptor_sprite = Sprite('interceptor.png', (-fleet_manager_size[0] + 200, -250), scale = scale, color = color_convert('red'))
+        cruiser_sprite = Sprite('cruiser.png',         (-fleet_manager_size[0] + 200, -550), scale = scale, color = color_convert('red'))        
+        dreadnought_sprite = Sprite('dreadnought.png', (-fleet_manager_size[0] + 200, -850), scale = scale, color = color_convert('red'))        
+        starbase_sprite = Sprite('starbase white.png', (-fleet_manager_size[0] + 200, -1150), scale = scale, color = color_convert('red'))
+        
+        
+        fleet_manager_frame.add(interceptor_sprite)
+        fleet_manager_frame.add(cruiser_sprite)
+        fleet_manager_frame.add(dreadnought_sprite)
+        fleet_manager_frame.add(starbase_sprite)
+
+    def update_time(self, dt):
+        new_color = [0, random.randint(230,255), 0, 255]       
+        self.info.element.color = new_color
+        
+    def set_info(self, text):
+        self.info.do(InfoAction(text, '_', 0.4))
 
     def on_mouse_press(self, x, y, button, modifiers): 
         rect = self.action_board_sprite.get_AABB()        
@@ -672,7 +686,7 @@ class ActionLayer(Layer):
             dx = (rect.right - rect.left) / 6.0
             for n in range(6):
                 if rect.left + dx * n < x < rect.left + dx * (n + 1):
-                    self.parent.info_layer.set_info('Select Action: ' + self.action_list[n])
+                    self.parent.hud_layer.set_info('Select Action: ' + self.action_list[n])
                     self.add(self.selection_sprite)
                     self.selection_sprite.x = rect.left + (self.action_position[n] + 0.5) * dx 
                     self.selection_sprite.color = color_convert(self.game.current_player.color)
@@ -723,16 +737,14 @@ class BoardScene(Scene):
     def __init__(self, game):
         super(BoardScene, self).__init__()
         self.add(ColorLayer(0,0,0,255), 0)
-        scroller = ScrollingManager()        
-        self.info_layer = InfoLayer()
-        self.action_layer = ActionLayer(game)
+        scroller = ScrollingManager()
+        self.hud_layer = HudLayer(game)
         self.popup_layer = PopUpLayer(game)
-        self.board_layer = BoardLayer(scroller, self.info_layer, game)
+        self.board_layer = BoardLayer(scroller, self.hud_layer, game)
         scroller.add(self.board_layer)
         self.add(scroller, 1)
         #self.add(control_layer, 2)
-        self.add(self.info_layer, 3)
-        self.add(self.action_layer, 4)
+        self.add(self.hud_layer, 4)
         self.add(self.popup_layer, 5)
         
 class PlayerBoardScene(Scene):
