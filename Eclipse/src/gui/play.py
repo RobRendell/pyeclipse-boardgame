@@ -18,7 +18,7 @@ from hexmanager import HexManager
 from cocos.actions.base_actions import IntervalAction
 import random
 from engine.zone import Sector, ResourceSlot
-from engine.component import InfluenceDisc, Ship, Interceptor, Cruiser,\
+from engine.component import InfluenceDisc, Ship, Interceptor, Cruiser, Dreadnought, Starbase,\
     AncientShip, GalacticCenterDefenseSystem, DiscoveryTile, PopulationCube
 from pyglet.window.mouse import RIGHT
 from pyglet.event import EVENT_HANDLED
@@ -38,6 +38,7 @@ pyglet.resource.path.append('./image/research_tiles')
 pyglet.resource.path.append('./image/npc')
 pyglet.resource.path.append('./image/ships')
 pyglet.resource.path.append('./font')
+pyglet.resource.path.append('./ship_stats')
 pyglet.resource.reindex()
 
 pyglet.font.add_directory('font')
@@ -219,14 +220,13 @@ class BoardLayer(ScrollableLayer):
                
         #ships
         for ship in sector.get_components(Ship):
-            
-            #change that into a dictionary
-            
-            if isinstance(ship, Interceptor):
-                ship_picture = 'interceptor.png'
-            elif isinstance(ship, Cruiser):
-                ship_picture = 'cruiser.png'
+
                 
+            ship_picture = {Interceptor : 'interceptor.png',
+                            Cruiser     : 'cruiser.png',
+                            Dreadnought : 'dreadnought.png',
+                            Starbase    : 'starbase.png'
+                            }[ship.__class__]
                 
             ship_coord = self.hex_manager.get_sprite_coord(u, v)
             ship_sprite = SelectableSprite(ship,
@@ -361,7 +361,6 @@ class BoardLayer(ScrollableLayer):
                         return EVENT_HANDLED
                     
                     elif isinstance(child.obj, Ship):
-                        print child.obj.get_stats()
                         self.hud_layer.update_fleet([child.obj])
                         
 
@@ -623,7 +622,11 @@ class HudLayer(Layer):
     def __init__(self, game):
         super(HudLayer, self).__init__()
         self.game = game
-        self.action_board_sprite = Sprite('action_board_terran.png', scale = 0.3)
+        
+        #hud scale        
+        scale_hud = min(director.get_window_size()[0] / 1920.0, director.get_window_size()[1] / 1080.0)
+        
+        self.action_board_sprite = Sprite('action_board_terran.png', scale = 0.3 * scale_hud)
         self.add(self.action_board_sprite)
         self.action_board_sprite.position = self.action_board_sprite.get_AABB().topleft
         self.action_board_sprite.x += director.get_window_size()[0]
@@ -635,11 +638,12 @@ class HudLayer(Layer):
                             'Move'
                             )
         self.action_position = [0.2, 1.12, 2.05, 3, 3.95, 4.9]
-        self.selection_sprite = Sprite('action_selection_halo.png', scale = 0.3, position = self.action_board_sprite.position)
+        self.selection_sprite = Sprite('action_selection_halo.png', scale = 0.3 * scale_hud, position = self.action_board_sprite.position)
         
         self.turn_button = Sprite('turn_button.png', 
                                   anchor = (0,0),
-                                  color = color_convert(game.current_player.color)
+                                  color = color_convert(game.current_player.color),
+                                  scale =  scale_hud
                                   )
         
         self.add(self.turn_button)
@@ -659,26 +663,51 @@ class HudLayer(Layer):
         
         #fleet manager
         fleet_manager_size = (919, 1252)
-        self.fleet_manager_frame = Sprite('fleet_manager.png', (director.get_window_size()[0],director.get_window_size()[1]), scale = 0.5, anchor = fleet_manager_size )
-        self.add(self.fleet_manager_frame)
+        fleet_manager_frame = Sprite('fleet_manager.png', (director.get_window_size()[0],director.get_window_size()[1]), scale = 0.5 * scale_hud, anchor = fleet_manager_size )
+        self.add(fleet_manager_frame)
+
+        self.sub_layer = Layer()
+        fleet_manager_frame.add(self.sub_layer)
         
     def update_fleet(self, ships):
         #refresh the frame
-        for child in self.fleet_manager_frame.get_children():
+        for child in self.sub_layer.get_children():
             child.kill()
         
         #get all the owners
         owners = set([ship.owner for ship in ships])
         for owner in owners:        
-            ship_types = set([ship.name for ship in ships if ship.owner is owner])
-            for n, ship_type in enumerate(ship_types):               
+            ship_names = set([ship.name for ship in ships if ship.owner is owner])
+            for n, ship_name in enumerate(ship_names):               
             
                 scale = 0.7
                 fleet_manager_size = (919, 1252)
                 y_pos = -250 - 300 * n
-                ship_sprite = Sprite(ship_type + '.png', (-fleet_manager_size[0] + 200, y_pos), scale = scale, color = color_convert(owner.color))   
+                ship_sprite = Sprite(ship_name + '.png',
+                                     (-fleet_manager_size[0] + 200, y_pos),
+                                     scale = scale,
+                                     color = color_convert(owner.color))   
                 
-                self.fleet_manager_frame.add(ship_sprite)
+                self.sub_layer.add(ship_sprite)
+                """
+                ship_parts = owner.personal_board.blueprints.get_ship_parts(ship_name)
+                for m, ship_part in enumerate(ship_parts):
+                    ship_part_sprite = Sprite(ship_part.name + '.png', (-fleet_manager_size[0] + 500 + 100 * m, y_pos), scale = 0.8)
+                    self.fleet_manager_frame.add(ship_part_sprite)
+                """
+                
+                ship_stats = owner.personal_board.blueprints.get_stats(ship_name)
+                non_weapon_stats = ['initiative', 'movement', 'hull', 'computer', 'shield']
+                for m, stat_name in enumerate(non_weapon_stats):
+                    label_stat = Label('', 
+                                      (-fleet_manager_size[0] + 400, y_pos + 60 - 40 *m),
+                                      font_name = 'Estrogen',
+                                      font_size = 30,
+                                      color = self.base_color,
+                                      width = 1000,
+                                      multiline = True)
+                    self.sub_layer.add(label_stat)
+                    label_stat.do(InfoAction(stat_name + ' : ' + str(ship_stats[stat_name]), '', 0.4))
 
     def update_time(self, dt):
         new_color = [0, random.randint(230,255), 0, 255]       

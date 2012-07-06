@@ -90,6 +90,17 @@ class Board(Zone):
             return self.hex_grid[coord].get_components(comp_type)
         return [self.hex_grid[coord]] + self.hex_grid[coord].get_components()
     
+class PlayerBoard(Zone):
+    def __init__(self, owner, ship_parts_supply):
+        self.owner = owner
+        self.blueprints = BlueprintBoard(owner, ship_parts_supply)
+        self.resource_track = ResourceTrack(owner)
+        self.population_track = PopulationTrack(owner)
+        self.population_cemetery = PopulationCemetery(owner)
+        self.influence_track = InfluenceTrack(owner)
+        self.technology_track = TechnologyTrack(owner)
+        self.faction = owner.faction
+    
 class ResourceSlot(Zone):
     """A slot for a population cube."""
     def __init__(self, owner = None, resource_type = None, advanced = False):
@@ -351,9 +362,26 @@ class BlueprintBoard(Zone):
                 stats['missile2'] += sp.n_dice
             elif sp.hits > 0:
                 stats['cannon' + str(sp.hits)] += sp.n_dice            
-            stats['energy'] += sp.energy_produced - sp.energy_consumed        
-                            
+            stats['energy'] += sp.energy_produced - sp.energy_consumed
+            
         return stats
+            
+    def get_ship_parts(self, ship_name):
+        """Get a list of all the active ship parts"""
+        ship_parts = []
+        for ship_part_tile_default, ship_part_tile in zip(self.ship_blueprints_default[ship_name], 
+                                                          self.ship_blueprints[ship_name]):
+            if ship_part_tile is None:
+                if ship_part_tile_default is not None:
+                    sp = ship_part_tile_default                
+                else:
+                    continue
+            else:
+                print ship_part_tile.name
+                sp = ship_part_tile
+            ship_parts.append(sp)
+            
+        return ship_parts        
 
 class ResourceTrack(Zone):
     def __init__(self, owner):

@@ -66,7 +66,7 @@ class Game(object):
         
         #assign a personal board, a starting hex and a personal supply to each player
         for n, player in enumerate(self.players):
-            player.personal_board = cp.PlayerBoard(player, self.ship_parts_supply)
+            player.personal_board = zn.PlayerBoard(player, self.ship_parts_supply)
             player.starting_hex = dict([(h.id, h) for h in st.starting_hexes])[player.faction.sector]
                               
             player.personal_supply = zn.PersonalSupply(player)
@@ -112,6 +112,8 @@ class Game(object):
                                                                                 'cruiser' : cp.Cruiser                                                                              
                                                                                 }[player.faction.starting_unit]
                                                               ))
+            self.board.add(coord, player.personal_supply.take(component_type = cp.Dreadnought))
+            
             for cube_slot in self.board.get_components(coord, zn.ResourceSlot):
                 if cube_slot.isAllowed(player):
                     cube_slot.add(player.personal_board.population_track.take(cube_slot.resource_type))

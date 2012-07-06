@@ -1,6 +1,5 @@
 __author__="jglouis"
 __date__ ="$Dec 21, 2011 10:35:50 AM$"
-import zone as zn
 
 class Component(object):
     """
@@ -14,17 +13,6 @@ class PersonalComponent(Component):
     """A PersonalComponent is a component with one owner."""
     def __init__(self, owner):
         self.owner = owner
-        
-class PlayerBoard(PersonalComponent):
-    def __init__(self, owner, ship_parts_supply):
-        super(PlayerBoard, self).__init__(owner)
-        self.blueprints = zn.BlueprintBoard(owner, ship_parts_supply)
-        self.resource_track = zn.ResourceTrack(owner)
-        self.population_track = zn.PopulationTrack(owner)
-        self.population_cemetery = zn.PopulationCemetery(owner)
-        self.influence_track = zn.InfluenceTrack(owner)
-        self.technology_track = zn.TechnologyTrack(owner)
-        self.faction = owner.faction
 
 class SectorTile(Component):
     """An hexagon tile."""

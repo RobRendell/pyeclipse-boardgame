@@ -1,7 +1,3 @@
-    #import sys
-#sys.path.append('C:\\Users\\jglouis\\workspace\\Eclipse\\src\\material\\data')
-
-
 from engine.rule.game import Game
 from gui.play import MainScreen
 
