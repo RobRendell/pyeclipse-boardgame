@@ -13,6 +13,7 @@ import pyglet
 
 from engine.rule.game import Game
 from gui.play import MainScreen
+from cocos.sprite import Sprite
 
 
 #from cocos.particle import ParticleSystem, Color
@@ -24,17 +25,20 @@ pyglet.resource.reindex()
 class MainMenuScene(Scene):
     def __init__(self):
         super(MainMenuScene, self).__init__()
-        self.add(BackgroundLayer())
+        background = Sprite('eclipse.jpg')
+        background.position = (director.get_window_size()[0]/2, director.get_window_size()[1]/2)
+        self.add(background)
         multiplexLayer = MultiplexLayer(
                              MainMenu(),
                              OptionsMenu(),
                              AboutLayer())
+        multiplexLayer.position = (0, -100)
         self.add(multiplexLayer, 1)
         director.run(self)
 
 class MainMenu(Menu):
     def __init__(self):
-        super(MainMenu, self).__init__('ECLIPSE')
+        super(MainMenu, self).__init__()
 
         items = []
         
@@ -77,13 +81,4 @@ class AboutLayer(Layer):
         
     def on_quit(self):
         self.parent.switch_to(0)
-        
-class BackgroundLayer(Layer):
-    def __init__(self):
-        super(BackgroundLayer, self).__init__()
-        self.img = pyglet.resource.image('eclipse.jpg')
-
-    def draw( self ):
-        self.img.blit(100,0)
-    
         
