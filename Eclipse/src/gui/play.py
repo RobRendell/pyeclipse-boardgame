@@ -7,7 +7,7 @@ from cocos.scene import Scene
 from cocos.layer.base_layers import Layer
 from cocos.text import Label
 from cocos.director import director
-from cocos.scenes.transitions import FadeUpTransition
+from cocos.scenes.transitions import FadeUpTransition, ZoomTransition
 from cocos.layer.util_layers import ColorLayer
 from cocos.draw import Line
 import math
@@ -28,6 +28,9 @@ from cocos.batch import BatchNode
 from cocos.actions.interval_actions import Rotate
 from cocos.menu import Menu, MenuItem, zoom_in, zoom_out, shake, ColorMenuItem, fixedPositionMenuLayout, LEFT, TOP,\
     BOTTOM, verticalMenuLayout
+from pyglet.gl.gl import glViewport, glMatrixMode, glLoadIdentity, GL_PROJECTION,\
+    GL_MODELVIEW, glOrtho
+from pyglet.gl.glu import gluPerspective, gluLookAt
 
 pyglet.resource.path.append('./image')
 pyglet.resource.path.append('./image/boards')
@@ -56,6 +59,24 @@ def color_convert(text):
             'science'   :(230,146,161),
             None        :(255,255,255)
             }[text]
+
+def decorator(f):
+    def new_f(self):
+        if len(self.resource_slot_sprite.obj.get_components()) == 1: #remove population cube                
+            cube = self.resource_slot_sprite.obj.get_components()[0]
+            self.game.move(self.resource_slot_sprite.obj, cube.owner.personal_board.population_track, resource_type = f(self))
+            self.resource_slot_sprite.remove(self.resource_slot_sprite.get_children()[0])             
+        else:          
+            self.game.move(self.player.personal_board.population_track, self.resource_slot_sprite.obj, resource_type = f(self))
+            color = color_convert(self.player.color)
+            population_sprite = Sprite('population white.png',
+                                                           position = self.resource_slot_sprite.position,
+                                                           color = color,
+                                                           scale = 0.2
+                                                           )
+            self.resource_slot_sprite.add(population_sprite,1)       
+        self.kill()      
+    return new_f
 
 class SelectableSprite(Sprite):
     """
@@ -95,24 +116,6 @@ class PopulationChoiceMenu(Menu):
         
         self.create_menu(items, layout_strategy=verticalMenuLayout)
         
-    def decorator(f):
-        def new_f(self):
-            if len(self.resource_slot_sprite.obj.get_components()) == 1: #remove population cube                
-                cube = self.resource_slot_sprite.obj.get_components()[0]
-                self.game.move(self.resource_slot_sprite.obj, cube.owner.personal_board.population_track, resource_type = f(self))
-                self.resource_slot_sprite.remove(self.resource_slot_sprite.get_children()[0])             
-            else:          
-                self.game.move(self.player.personal_board.population_track, self.resource_slot_sprite.obj, resource_type = f(self))
-                color = color_convert(self.player.color)
-                population_sprite = Sprite('population white.png',
-                                                               position = self.resource_slot_sprite.position,
-                                                               color = color,
-                                                               scale = 0.2
-                                                               )
-                self.resource_slot_sprite.add(population_sprite,1)       
-            self.kill()      
-        return new_f
-    
     @decorator
     def on_money(self):        
         return 'money'
@@ -141,6 +144,7 @@ class BoardLayer(ScrollableLayer):
         self.hex_manager = HexManager(self.hex_width, (self.px_width / 2, self.px_height / 2))
         self.scroller = scroller
         self.scroller.set_focus(self.px_width / 2, self.px_height / 2)
+        self.scroller.scale = 0.5
         self.hud_layer = hud_layer
         self.game = game
         self.hex_color_sprites = {}
@@ -323,7 +327,7 @@ class BoardLayer(ScrollableLayer):
     def on_mouse_press(self, screen_x, screen_y, button, modifiers):               
         x, y = self.scroller.pixel_from_screen(screen_x, screen_y)
         hex_u, hex_v = self.hex_manager.get_hex_from_rect_coord(x, y)
-        coord = (hex_u, hex_v)        
+        coord = (hex_u, hex_v)
         
         sector = self.game.board.get_components(coord, Sector)
 
@@ -626,10 +630,11 @@ class HudLayer(Layer):
         #hud scale        
         scale_hud = min(director.get_window_size()[0] / 1920.0, director.get_window_size()[1] / 1080.0)
         
-        self.action_board_sprite = Sprite('action_board_terran.png', scale = 0.3 * scale_hud)
-        self.add(self.action_board_sprite)
-        self.action_board_sprite.position = self.action_board_sprite.get_AABB().topleft
-        self.action_board_sprite.x += director.get_window_size()[0]
+        action_board_image = pyglet.resource.image('action_board_terran.png')
+        action_board_anchor = (action_board_image.width, 0)
+        self.action_board_sprite = Sprite(action_board_image, scale = 0.3 * scale_hud, anchor = action_board_anchor)
+        self.action_board_sprite.position = (director.get_window_size()[0], 0)
+        self.add(self.action_board_sprite)       
         self.action_list = ('Explore',
                             'Influence',
                             'Research',
@@ -638,7 +643,9 @@ class HudLayer(Layer):
                             'Move'
                             )
         self.action_position = [0.2, 1.12, 2.05, 3, 3.95, 4.9]
-        self.selection_sprite = Sprite('action_selection_halo.png', scale = 0.3 * scale_hud, position = self.action_board_sprite.position)
+        selection_image = pyglet.resource.image('action_selection_halo.png')
+        selection_anchor = (selection_image.width/2, 0)
+        self.selection_sprite = Sprite(selection_image, scale = 0.3 * scale_hud, anchor = selection_anchor, position = self.action_board_sprite.position)
         
         self.turn_button = Sprite('turn_button.png', 
                                   anchor = (0,0),
@@ -662,12 +669,21 @@ class HudLayer(Layer):
         self.schedule_interval(self.update_time, .1)
         
         #fleet manager
-        fleet_manager_size = (919, 1252)
-        fleet_manager_frame = Sprite('fleet_manager.png', (director.get_window_size()[0],director.get_window_size()[1]), scale = 0.5 * scale_hud, anchor = fleet_manager_size )
-        self.add(fleet_manager_frame)
+        fleet_manager_image = pyglet.resource.image('fleet_manager.png')
+        fleet_manager_size = (fleet_manager_image.width, fleet_manager_image.height)
+        self.fleet_manager_frame = Sprite(fleet_manager_image, scale = 0.5 * scale_hud, anchor = fleet_manager_size )
+        self.fleet_manager_frame.position = director.get_window_size()
+        self.add(self.fleet_manager_frame)
 
         self.sub_layer = Layer()
-        fleet_manager_frame.add(self.sub_layer)
+        self.fleet_manager_frame.add(self.sub_layer)
+        
+    def do_resize(self, virtual_offset_x, virtual_offset_y):
+        rhs, top = director.get_window_size()
+        self.fleet_manager_frame.position = (rhs + virtual_offset_x, top + virtual_offset_y)
+        self.action_board_sprite.position = (rhs + virtual_offset_x, -virtual_offset_y)
+        self.turn_button.position = (-virtual_offset_x, -virtual_offset_y)
+        self.selection_sprite.y = -virtual_offset_y
         
     def update_fleet(self, ships):
         #refresh the frame
@@ -783,6 +799,27 @@ class BoardScene(Scene):
         #self.add(control_layer, 2)
         self.add(self.hud_layer, 4)
         self.add(self.popup_layer, 5)
+        director.push_handlers(self)
+        self.on_resize(director._usable_width + 2*director._offset_x, director._usable_height + 2*director._offset_y)
+
+    def on_resize(self, new_width, new_height):
+        virtual_offset_x, virtual_offset_y = 0, 0
+        virtual_width, virtual_height = director.get_window_size()
+        if director._offset_x > 0:
+            virtual_offset_x = 1.0 * virtual_width * director._offset_x / director._usable_width 
+        if director._offset_y > 0:
+            virtual_offset_y = 1.0 * virtual_height * director._offset_y / director._usable_height 
+        virtual_max_x = virtual_width + virtual_offset_x
+        virtual_max_y = virtual_height + virtual_offset_y
+        # Adjust projection matrix to expose entire screen
+        glViewport(0, 0, new_width, new_height)
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(-virtual_offset_x, virtual_max_x, -virtual_offset_y, virtual_max_y, -1, 1)
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+        # Adjust HUD elements
+        self.hud_layer.do_resize(virtual_offset_x, virtual_offset_y)
         
 class PlayerBoardScene(Scene):
     def __init__(self, player):
@@ -801,7 +838,6 @@ class ResearchBoardScene(Scene):
         
 class MainScreen(object):
     def __init__(self, game):  
-        director.init(fullscreen = True, resizable = True, do_not_scale = False)
         control_layer = ControlLayer(game)
         
         board_scene = BoardScene(game)
@@ -814,7 +850,7 @@ class MainScreen(object):
         research_board_scene = ResearchBoardScene()
         control_layer.add_scene(research_board_scene, R)
         
-        director.run(board_scene)
+        director.replace(ZoomTransition(board_scene, 1.0))
         
 class InfoAction(IntervalAction):
     """Action that can be applied to any Label to make a dynamic text display

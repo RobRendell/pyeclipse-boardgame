@@ -4,33 +4,49 @@ Created on 4 janv. 2012
 @author: jglouis
 '''
 
-from cocos.text import Label
 from cocos.director import director
+from cocos.layer.base_layers import MultiplexLayer, Layer
 from cocos.menu import MenuItem, ToggleMenuItem, Menu
 from cocos.scene import Scene
-from cocos.layer.base_layers import MultiplexLayer, Layer
-from cocos.particle import ParticleSystem, Color
-from cocos.euclid import Point2
+from cocos.text import Label
 import pyglet
+
+from engine.rule.game import Game
+from gui.play import MainScreen
+
+
+#from cocos.particle import ParticleSystem, Color
+#from cocos.euclid import Point2
 
 pyglet.resource.path.append('../image')
 pyglet.resource.reindex()
 
+class MainMenuScene(Scene):
+    def __init__(self):
+        super(MainMenuScene, self).__init__()
+        self.add(BackgroundLayer())
+        multiplexLayer = MultiplexLayer(
+                             MainMenu(),
+                             OptionsMenu(),
+                             AboutLayer())
+        self.add(multiplexLayer, 1)
+        director.run(self)
+
 class MainMenu(Menu):
     def __init__(self):
         super(MainMenu, self).__init__('ECLIPSE')
-        
+
         items = []
         
         items.append(MenuItem('New Game', self.on_new_game))
         items.append(MenuItem('Options', self.on_options))
         items.append(MenuItem('About', self.on_about))
         self.create_menu(items)
-        
-        
-        
+
     def on_new_game(self):
         print 'launch game'
+        game = Game(6)
+        MainScreen(game)
         
     def on_options(self):
         self.parent.switch_to(1)
@@ -70,12 +86,4 @@ class BackgroundLayer(Layer):
     def draw( self ):
         self.img.blit(100,0)
     
-director.init(resizable = True)
-scene = Scene()
-scene.add(BackgroundLayer())
-scene.add(MultiplexLayer(
-                         MainMenu(),
-                         OptionsMenu(),
-                         AboutLayer()))
-director.run(scene)
         
