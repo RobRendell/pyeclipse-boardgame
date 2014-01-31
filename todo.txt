@@ -1,0 +1,32 @@
+Things TODO
+===========
+
+* End Turn/Pass button - make it a wheel with all the colours in segments around the wheel, passing rotates the wheel.
+
+* Make action board on main UI race-specific (carve into pieces).
+
+* On main UI, show segment of influence track above action board (show right-most 2 discs and current empty circle).  Take action by dragging the disc to the action board.
+
+* Make HudLayer info context-sensitive.  When taking an action, hovering above each action updates the layer with relevant information.
+    * Explore: outline all legal hexes with I, II or III in them, HudLayer shows # of hexes left
+    * Influence: show segment of influence track, colony ships
+    * Research: supply board and current science are relevant
+    * Upgrade: available ship parts and ship blueprints are relevant
+    * Build: current minerals, available ships, costs
+    * Move: Ship speeds, highlight ships
+
+* Show everyone's influence discs stacked on the action board.  Clicking a disc shows a summary of the public information about that action (and temporarily updates the action board to the relevant race).  This is especially useful if using the simultaneous actions option.
+
+* Start menu: selecting number of players (AI and human), selecting colours/species, including/excluding optional elements (such as Rise of the Ancients pieces).  Multiplayer options (hotseat vs. online vs. PBEM).
+
+* Drawing technologies
+
+* Action phase.
+
+* Combat phase.
+
+* Upkeep phase.
+
+* Cleanup phase.
+
+* I'd prefer species to be separate files, rather than all in one file.  I'd also prefer ship blueprints to be stored in the species data rather than hard-coded.
