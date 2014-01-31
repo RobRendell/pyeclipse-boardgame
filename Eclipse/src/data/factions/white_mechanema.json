@@ -1,0 +1,42 @@
+{
+    "name": "Mechanema",
+    "color": "white",
+    "actions": [ "explore1", "influence2_2", "research1", "upgrade3", "build3", "move2" ],
+    "trade": 3,
+    "sector": 230,
+    "reputation_diplomacy": 4,
+    "reputation_only": 0,
+    "diplomacy_only": 0,
+    "starting_money": 3,
+    "starting_science": 3,
+    "starting_material": 3,
+    "starting_techs": [ "Positron Computer" ],
+    "starting_units": [ "interceptor" ],
+    "colony_ships": 3,
+    "starting_reputation": 0,
+    "starting_influence": 13,
+    "blueprints": {
+	"interceptor": {
+	    "default": [ "Empty", "Ion Cannon", "Nuclear Source", "Nuclear Drive" ],
+	    "initiative": 2,
+	    "cost": 2
+	},
+	"cruiser": {
+	    "default": [ "Hull", "Empty", "Ion Cannon", "Nuclear Source", "Electron Computer", "Nuclear Drive" ],
+	    "initiative": 1,
+	    "cost": 4
+	},
+	"dreadnought": {
+	    "default": [ "Ion Cannon", "Hull", "Empty", "Hull", "Nuclear Source", "Ion Cannon", "Electron Computer", "Nuclear Drive" ],
+	    "cost": 7
+	},
+	"starbase": {
+	    "default": [ "Hull", "Ion Cannon", "Hull", "Empty", "Electron Computer" ],
+	    "initiative": 3,
+	    "energy": 3,
+	    "cost": 2
+	},
+	"orbital": { "cost": 4 },
+	"monolith": { "cost": 8 }
+    }
+}

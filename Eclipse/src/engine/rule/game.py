@@ -112,7 +112,7 @@ class Game(object):
                                                                                 'cruiser' : cp.Cruiser                                                                              
                                                                                 }[player.faction.starting_unit]
                                                               ))
-            self.board.add(coord, player.personal_supply.take(component_type = cp.Dreadnought))
+#             self.board.add(coord, player.personal_supply.take(component_type = cp.Dreadnought))
             
             for cube_slot in self.board.get_components(coord, zn.ResourceSlot):
                 if cube_slot.isAllowed(player):

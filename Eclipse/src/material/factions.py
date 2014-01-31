@@ -1,7 +1,8 @@
 from engine.rule.faction import Faction
 from engine.component import TechnologyTile
-import os.path
+import os
 import csv
+import json
 
 __author__="jglouis"
 __date__ ="$Dec 23, 2011 11:33:19 AM$"
@@ -20,41 +21,35 @@ def create_starting_technology_tiles(name):
                         row[4]
                     )
 
-def create_faction(row):
+def create_faction_json(json):
+    starting_technologies = []
+    for tech in json["starting_techs"]:
+        starting_technologies.append(create_starting_technology_tiles(tech.lower()))
     return Faction(
-        row[0],
-        row[1],
-        int(row[2]),
-        int(row[3]),
-        int(row[4]),
-        int(row[5]),
-        int(row[6]),
-        int(row[7]),
-        row[8],
-        int(row[9]),
-        int(row[10]),
-        int(row[11]),
-        int(row[12]),
-        int(row[13]),
-        int(row[14]),
-        create_starting_technology_tiles(row[15]),
-        create_starting_technology_tiles(row[16]),
-        create_starting_technology_tiles(row[17]),
-        row[18],
-        row[19],
-        int(row[20]),
-        int(row[21]),
-        int(row[22]),
-        int(row[23]),
-        row[24]
+        json["name"].lower(),
+        str(json["color"]),
+        json["actions"],
+        json["trade"],
+        str(json["sector"]),
+        json["reputation_diplomacy"],
+        json["reputation_only"],
+        json["diplomacy_only"],
+        json["starting_money"],
+        json["starting_science"],
+        json["starting_material"],
+        starting_technologies,
+        json["starting_units"][0],
+        json["colony_ships"],
+        json["starting_reputation"],
+        json["starting_influence"],
+        json["blueprints"],
+        json["special"] if json.has_key("special") else None
     )
 
-reader = csv.reader(open('data/factions.csv'), delimiter = ';')
+for faction_file in os.listdir('data/factions/'):
+    print faction_file
+    faction_json = json.load(open('data/factions/' + faction_file))
+    factions.append(create_faction_json(faction_json))
 
-#skip the first line
-reader.next()
-
-for row in reader:
-    factions.append(create_faction(row))
 
 print len(factions), 'factions loaded...'

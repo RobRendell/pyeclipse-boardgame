@@ -47,7 +47,7 @@ pyglet.resource.reindex()
 pyglet.font.add_directory('font')
     
 def color_convert(text):
-    return {'blank'     :(255,255,255),
+    return {'white'     :(255,255,255),
             'red'       :(255,0,0), 
             'green'     :(0,255,0),  
             'blue'      :(0,0,255), 
@@ -95,7 +95,14 @@ class PopUpSprite(Sprite):
         self.add(PopulationChoiceMenu(game, board_layer, resource_slot_sprite, player))        
         
 class BackgroundSprite(Sprite):
-    pass   
+    pass
+
+class AnchorSprite(Sprite):
+    def __init__(self, image, anchor, **kwargs):
+        if isinstance(image, str) or isinstance(image, unicode):
+            image = pyglet.resource.image(image)
+        pixel_anchor = (int(image.width * anchor[0]), int(image.height * anchor[1]))
+        super(AnchorSprite, self).__init__(image, anchor = pixel_anchor, **kwargs)
 
 class PopulationChoiceMenu(Menu):
     def __init__(self, game, board_layer, resource_slot_sprite, player):
@@ -628,13 +635,14 @@ class HudLayer(Layer):
         self.game = game
         
         #hud scale        
-        scale_hud = min(director.get_window_size()[0] / 1920.0, director.get_window_size()[1] / 1080.0)
+        self.scale_hud = min(director.get_window_size()[0] / 1920.0, director.get_window_size()[1] / 1080.0)
         
-        action_board_image = pyglet.resource.image('action_board_terran.png')
-        action_board_anchor = (action_board_image.width, 0)
-        self.action_board_sprite = Sprite(action_board_image, scale = 0.3 * scale_hud, anchor = action_board_anchor)
-        self.action_board_sprite.position = (director.get_window_size()[0], 0)
-        self.add(self.action_board_sprite)       
+        self.action_board_layer = Layer()
+        self.action_board_layer.position = (director.get_window_size()[0], 0)
+        self.add(self.action_board_layer)
+        action_blank = AnchorSprite('image/boards/action_board.png', anchor = (1.0, 0), scale = 0.3 * self.scale_hud)
+        self.action_board_layer.add(action_blank, -1)
+        self.action_sprites = {}
         self.action_list = ('Explore',
                             'Influence',
                             'Research',
@@ -643,14 +651,14 @@ class HudLayer(Layer):
                             'Move'
                             )
         self.action_position = [0.2, 1.12, 2.05, 3, 3.95, 4.9]
-        selection_image = pyglet.resource.image('action_selection_halo.png')
-        selection_anchor = (selection_image.width/2, 0)
-        self.selection_sprite = Sprite(selection_image, scale = 0.3 * scale_hud, anchor = selection_anchor, position = self.action_board_sprite.position)
+        self.selection_sprite = AnchorSprite('action_selection_halo.png',
+                                             scale = 0.3 * self.scale_hud,
+                                             anchor = (0.5, 0),
+                                             position = self.action_board_layer.position)
         
         self.turn_button = Sprite('turn_button.png', 
                                   anchor = (0,0),
-                                  color = color_convert(game.current_player.color),
-                                  scale =  scale_hud
+                                  scale =  self.scale_hud
                                   )
         
         self.add(self.turn_button)
@@ -669,19 +677,19 @@ class HudLayer(Layer):
         self.schedule_interval(self.update_time, .1)
         
         #fleet manager
-        fleet_manager_image = pyglet.resource.image('fleet_manager.png')
-        fleet_manager_size = (fleet_manager_image.width, fleet_manager_image.height)
-        self.fleet_manager_frame = Sprite(fleet_manager_image, scale = 0.5 * scale_hud, anchor = fleet_manager_size )
+        self.fleet_manager_frame = AnchorSprite('fleet_manager.png', scale = 0.5 * self.scale_hud, anchor = (1.0, 1.0))
         self.fleet_manager_frame.position = director.get_window_size()
         self.add(self.fleet_manager_frame)
 
         self.sub_layer = Layer()
         self.fleet_manager_frame.add(self.sub_layer)
         
+        self.refresh_current_player()
+        
     def do_resize(self, virtual_offset_x, virtual_offset_y):
         rhs, top = director.get_window_size()
         self.fleet_manager_frame.position = (rhs + virtual_offset_x, top + virtual_offset_y)
-        self.action_board_sprite.position = (rhs + virtual_offset_x, -virtual_offset_y)
+        self.action_board_layer.position = (rhs + virtual_offset_x, -virtual_offset_y)
         self.turn_button.position = (-virtual_offset_x, -virtual_offset_y)
         self.selection_sprite.y = -virtual_offset_y
         
@@ -733,22 +741,39 @@ class HudLayer(Layer):
         self.info.do(InfoAction(text, '_', 0.4))
 
     def on_mouse_press(self, x, y, button, modifiers): 
-        rect = self.action_board_sprite.get_AABB()        
         x, y = director.get_virtual_coordinates(x, y)
+        action_sprite = self.action_sprites[self.action_sprites.keys()[0]];
+        rect = action_sprite.get_AABB()
+        rect.right = self.action_board_layer.position[0]
         if rect.contains(x, y):
             dx = (rect.right - rect.left) / 6.0
             for n in range(6):
                 if rect.left + dx * n < x < rect.left + dx * (n + 1):
                     self.parent.hud_layer.set_info('Select Action: ' + self.action_list[n])
-                    self.add(self.selection_sprite)
+                    self.add(self.selection_sprite, z=2)
                     self.selection_sprite.x = rect.left + (self.action_position[n] + 0.5) * dx 
                     self.selection_sprite.color = color_convert(self.game.current_player.color)
                     return EVENT_HANDLED
-                
         elif self.turn_button.get_AABB().contains(x, y):
-            self.game.end_turn()
-            self.turn_button.color = color_convert(self.game.current_player.color)
+            self.end_turn()
             return EVENT_HANDLED
+        
+    def end_turn(self):
+        self.game.end_turn()
+        self.refresh_current_player()
+        
+    def refresh_current_player(self):
+        self.turn_button.color = color_convert(self.game.current_player.color)
+        for action in self.action_sprites:
+            self.action_sprites[action].visible = False
+        for action in self.game.current_player.faction.actions:
+            if not self.action_sprites.has_key(action):
+                image = 'image/boards/action_' + action + '.png'
+                sprite = AnchorSprite(image, anchor = (1.0, 0), scale = 0.3 * self.scale_hud)
+                self.action_board_layer.add(sprite)
+                self.action_sprites[action] = sprite
+            self.action_sprites[action].visible = True
+        
                    
 class PopUpLayer(Layer):
     """

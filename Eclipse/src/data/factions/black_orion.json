@@ -1,0 +1,46 @@
+{
+    "name": "Orion Hegemony",
+    "color": "black",
+    "actions": [ "explore1", "influence2_2", "research1", "upgrade2", "build2", "move2" ],
+    "trade": 4,
+    "sector": 232,
+    "reputation_diplomacy": 4,
+    "reputation_only": 1,
+    "diplomacy_only": 0,
+    "starting_money": 3,
+    "starting_science": 3,
+    "starting_material": 5,
+    "starting_techs": [ "Neutron Bombs", "Gauss Shield" ],
+    "starting_units": [ "cruiser" ],
+    "colony_ships": 3,
+    "starting_reputation": 0,
+    "starting_influence": 13,
+    "blueprints": {
+	"interceptor": {
+	    "default": [ "Gauss Shield", "Ion Cannon", "Nuclear Source", "Nuclear Drive" ],
+	    "initiative": 3,
+	    "energy": 1,
+	    "cost": 3
+	},
+	"cruiser": {
+	    "default": [ "Hull", "Gauss Shield", "Ion Cannon", "Nuclear Source", "Electron Computer", "Nuclear Drive" ],
+	    "initiative": 2,
+	    "energy": 2,
+	    "cost": 5
+	},
+	"dreadnought": {
+	    "default": [ "Ion Cannon", "Hull", "Gauss Shield", "Hull", "Nuclear Source", "Ion Cannon", "Electron Computer", "Nuclear Drive" ],
+	    "initiative": 1,
+	    "energy": 3,
+	    "cost": 8
+	},
+	"starbase": {
+	    "default": [ "Hull", "Ion Cannon", "Hull", "Gauss Shield", "Electron Computer" ],
+	    "initiative": 5,
+	    "energy": 3,
+	    "cost": 3
+	},
+	"orbital": { "cost": 5 },
+	"monolith": { "cost": 10 }
+    }
+}

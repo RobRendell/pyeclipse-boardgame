@@ -1,0 +1,43 @@
+{
+    "name": "Descendants of Draco",
+    "color": "yellow",
+    "actions": [ "explore1_1", "influence2_2", "research1", "upgrade2", "build2", "move2" ],
+    "trade": 3,
+    "sector": 228,
+    "reputation_diplomacy": 4,
+    "reputation_only": 0,
+    "diplomacy_only": 0,
+    "starting_money": 2,
+    "starting_science": 4,
+    "starting_material": 3,
+    "starting_techs": [ ],
+    "starting_units": [ "interceptor" ],
+    "colony_ships": 3,
+    "starting_reputation": 0,
+    "starting_influence": 13,
+    "blueprints": {
+	"interceptor": {
+	    "default": [ "Empty", "Ion Cannon", "Nuclear Source", "Nuclear Drive" ],
+	    "initiative": 2,
+	    "cost": 3
+	},
+	"cruiser": {
+	    "default": [ "Hull", "Empty", "Ion Cannon", "Nuclear Source", "Electron Computer", "Nuclear Drive" ],
+	    "initiative": 1,
+	    "cost": 5
+	},
+	"dreadnought": {
+	    "default": [ "Ion Cannon", "Hull", "Empty", "Hull", "Nuclear Source", "Ion Cannon", "Electron Computer", "Nuclear Drive" ],
+	    "cost": 8
+	},
+	"starbase": {
+	    "default": [ "Hull", "Ion Cannon", "Hull", "Empty", "Electron Computer" ],
+	    "initiative": 3,
+	    "energy": 3,
+	    "cost": 3
+	},
+	"orbital": { "cost": 5 },
+	"monolith": { "cost": 10 }
+    },
+    "special": [ "Ancient Friend", "VP for Ancients" ]
+}
