@@ -825,7 +825,6 @@ class BoardScene(Scene):
         self.add(self.hud_layer, 4)
         self.add(self.popup_layer, 5)
         director.push_handlers(self)
-        self.on_resize(director._usable_width + 2*director._offset_x, director._usable_height + 2*director._offset_y)
 
     def on_resize(self, new_width, new_height):
         virtual_offset_x, virtual_offset_y = 0, 0
@@ -845,6 +844,10 @@ class BoardScene(Scene):
         glLoadIdentity()
         # Adjust HUD elements
         self.hud_layer.do_resize(virtual_offset_x, virtual_offset_y)
+
+    def on_enter(self):
+        super(BoardScene, self).on_enter()
+        self.on_resize(director._usable_width + 2*director._offset_x, director._usable_height + 2*director._offset_y)
         
 class PlayerBoardScene(Scene):
     def __init__(self, player):
