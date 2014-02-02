@@ -98,10 +98,14 @@ class BackgroundSprite(Sprite):
     pass
 
 class AnchorSprite(Sprite):
-    def __init__(self, image, anchor, **kwargs):
+    def __init__(self, image, anchor, rect = None, **kwargs):
         if isinstance(image, str) or isinstance(image, unicode):
             image = pyglet.resource.image(image)
-        pixel_anchor = (int(image.width * anchor[0]), int(image.height * anchor[1]))
+        if rect is not None:
+            image = image.get_region(rect.x, rect.y, rect.width, rect.height)
+            pixel_anchor = (int(rect.width * anchor[0]), int(rect.height * anchor[1]))
+        else:
+            pixel_anchor = (int(image.width * anchor[0]), int(image.height * anchor[1]))
         super(AnchorSprite, self).__init__(image, anchor = pixel_anchor, **kwargs)
 
 class PopulationChoiceMenu(Menu):
