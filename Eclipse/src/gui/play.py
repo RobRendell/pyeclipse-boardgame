@@ -159,6 +159,7 @@ class BoardLayer(ScrollableLayer):
         self.hud_layer = hud_layer
         self.game = game
         self.hex_color_sprites = {}
+        self.hex_color_discs = {}
 
         self.batch1 = BatchNode()
         self.batch2 = BatchNode()
@@ -170,10 +171,15 @@ class BoardLayer(ScrollableLayer):
         for coord in self.game.board.get_components().iterkeys():
             self.display_sector(coord)
     
-    def set_hex_color(self, coord, color):
-        color = color_convert(color)
+    def set_hex_color(self, coord, color_name):
+        color = color_convert(color_name)
         if coord in self.hex_color_sprites:
             self.hex_color_sprites[coord].color = color
+            if color_name == 'grey':
+                self.hex_color_discs[coord].visible = False
+            else:
+                self.hex_color_discs[coord].visible = True
+                self.hex_color_discs[coord].color = color
         else:
             u, v = coord
             rect_position = self.hex_manager.get_rect_coord_from_hex_coord(u, v)
@@ -187,6 +193,14 @@ class BoardLayer(ScrollableLayer):
             self.add(batch, name = str(coord))
             batch.add(hexa)
             self.hex_color_sprites[coord] = hexa
+            disc = Sprite('influence white.png',
+                          scale = 0.3,
+                          position = rect_position,
+                          color = color)
+            batch.add(disc)
+            if color_name == 'grey':
+                disc.visible = False
+            self.hex_color_discs[coord] = disc
             
     def rotate_hex(self, coord):
         rotate = Rotate(60, 0.2)
@@ -212,11 +226,11 @@ class BoardLayer(ScrollableLayer):
 
         #wormholes
         wormhole_positions = [(0.5, 0.5),
-                              (0.5, 0),
-                              (0, -0.5),
+                              (1.0, 0),
+                              (0.5, -0.5),
                               (-0.5, -0.5),
-                              (-0.5, 0),
-                              (0, 0.5)
+                              (-1.0, 0),
+                              (-0.5 , 0.5)
                               ]
         wormhole_rotations = [210, 270, 330, 30, 90, 150]
         
@@ -298,6 +312,8 @@ class BoardLayer(ScrollableLayer):
         vp_sprite = Sprite(vp_picture,
                            position = rect_position,
                            scale = 0.2)
+        vp_sprite.x += 17
+        vp_sprite.y += 17
         self.batch1.add(vp_sprite)
         
         #artifact
@@ -306,8 +322,8 @@ class BoardLayer(ScrollableLayer):
                                      position = rect_position,
                                      scale = 0.5
                                      )
-            artifact_sprite.x += 10
-            artifact_sprite.y += 10
+            artifact_sprite.x += 27
+            artifact_sprite.y += 27
             self.batch1.add(artifact_sprite)
         
         #discovery
@@ -325,7 +341,7 @@ class BoardLayer(ScrollableLayer):
                                     position = rect_position,
                                     scale = 0.3
                                     )
-            ancient_sprite.x +=  20.0 * (n - (1.0 * n / n_ancients))
+            ancient_sprite.x -=  20.0 * (n - (1.0 * n / n_ancients))
             ancient_sprite.y +=  20.0 * (n - (1.0 * n / n_ancients))
             self.batch3.add(ancient_sprite)
         if len(sector.get_components(GalacticCenterDefenseSystem)):
@@ -419,12 +435,13 @@ class BoardLayer(ScrollableLayer):
         hex_coord = []
         hex_centre = centre
         hex_r = r
-        hex_coord.append((hex_centre[0],                hex_centre[1] + 2 * hex_r / math.sqrt(3)))
-        hex_coord.append((hex_centre[0] + hex_r,        hex_centre[1] + hex_r / math.sqrt(3)))
-        hex_coord.append((hex_centre[0] + hex_r,        hex_centre[1] - hex_r / math.sqrt(3)))
-        hex_coord.append((hex_centre[0],                hex_centre[1] - 2 * hex_r / math.sqrt(3)))
-        hex_coord.append((hex_centre[0] - hex_r,        hex_centre[1] - hex_r / math.sqrt(3)))
-        hex_coord.append((hex_centre[0] - hex_r,        hex_centre[1] + hex_r / math.sqrt(3)))       
+        hex_vert = hex_r / math.sqrt(3)
+        hex_coord.append((hex_centre[0],                hex_centre[1] + 2 * hex_vert))
+        hex_coord.append((hex_centre[0] + hex_r,        hex_centre[1] + hex_vert))
+        hex_coord.append((hex_centre[0] + hex_r,        hex_centre[1] - hex_vert))
+        hex_coord.append((hex_centre[0],                hex_centre[1] - 2 * hex_vert))
+        hex_coord.append((hex_centre[0] - hex_r,        hex_centre[1] - hex_vert))
+        hex_coord.append((hex_centre[0] - hex_r,        hex_centre[1] + hex_vert))       
         w = 3        
         line1 = Line(hex_coord[0], hex_coord[1],(255,255,255,255) , w)
         line2 = Line(hex_coord[1], hex_coord[2],(255,255,255,255) , w)

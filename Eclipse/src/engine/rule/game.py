@@ -94,16 +94,16 @@ class Game(object):
                 coord = [(2,2),(-2,-2)][n]
                 rot = [0, 0][n] 
             elif n_players == 3:
-                coord = [(2,2),(0,-2),(-2,0)][n]  
+                coord = [(2,2),(2,-2),(-4,0)][n]  
                 rot = [0, 2, 1][n] 
             elif n_players == 4:
-                coord =[(2,2),(0,-2),(-2,-2),(0,2)][n]
-                rot = [2, 2, 2, 2][n] 
+                coord =[(4,0),(2,-2),(-4,-0),(-2,2)][n]
+                rot = [1, 1, 1, 1][n] 
             elif n_players == 5:
-                coord = [(2,2),(2,0),(0,-2),(-2,-2),(-2,0)][n] 
+                coord = [(2,2),(4,0),(2,-2),(-2,-2),(-4,0)][n] 
                 rot = [0, 1, 2, 2, 0][n] 
             elif n_players == 6:
-                coord = [(2,2),(2,0),(0,-2),(-2,-2),(-2,0),(0,2)][n] 
+                coord = [(2,2),(4,0),(2,-2),(-2,-2),(-4,0),(-2,2)][n] 
                 rot = [0, 1, 2, 0, 1, 2][n]             
             self.board.add(coord, player.starting_hex, rot)
             self.board.add(coord, player.personal_board.influence_track.take())
