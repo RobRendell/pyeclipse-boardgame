@@ -2,13 +2,14 @@ __author__="jglouis"
 __date__ ="$Dec 23, 2011 1:16:52 PM$"
 
 class Faction(object):
-    def __init__(self, name, color, actions, trade, sector,
+    def __init__(self, name, color, board, actions, trade, sector,
                  reputation_diplomacy, reputation_only, diplomacy_only,
                  starting_money, starting_science, starting_material, starting_techs,
                  starting_unit, colony_ships, starting_reputation, starting_influence,
                  blueprints, special):
         self.name = name
         self.color = color
+        self.board = board
         self.actions = actions
         self.trade = trade
         self.sector = sector

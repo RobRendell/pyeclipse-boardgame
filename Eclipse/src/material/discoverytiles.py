@@ -22,8 +22,7 @@ def create_discovery_tile(row):
         row[11] == 'True',
         int(row[12]),
         int(row[13]),
-        int(row[14]),
-        int(row[15])
+        int(row[14])
     )
 
 reader = csv.reader(open('data/discoverytiles.csv'), delimiter = ';')

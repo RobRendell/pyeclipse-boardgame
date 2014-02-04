@@ -1,6 +1,7 @@
 {
     "name": "Terran Union",
     "color": "green",
+    "board": "player_board_green_terran.jpg",
     "actions": [ "explore1", "influence2_2", "research1", "upgrade2", "build2", "move3" ],
     "trade": 2,
     "sector": 225,

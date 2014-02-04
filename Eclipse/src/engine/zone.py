@@ -1,5 +1,7 @@
 import random
 import component as cp
+from material import shipparts
+from sets import Set
 
 __author__="jglouis"
 __date__ ="$Dec 21, 2011 10:49:19 AM$"
@@ -91,9 +93,9 @@ class Board(Zone):
         return [self.hex_grid[coord]] + self.hex_grid[coord].get_components()
     
 class PlayerBoard(Zone):
-    def __init__(self, owner, ship_parts_supply):
+    def __init__(self, owner):
         self.owner = owner
-        self.blueprints = BlueprintBoard(owner, ship_parts_supply)
+        self.blueprints = BlueprintBoard(owner)
         self.resource_track = ResourceTrack(owner)
         self.population_track = PopulationTrack(owner)
         self.population_cemetery = PopulationCemetery(owner)
@@ -200,171 +202,49 @@ class Bag(Zone):
         random.shuffle(self.content)
 
 class BlueprintBoard(Zone):
-    def __init__(self, owner,  ship_parts_supply):
+    def __init__(self, owner):
         super(BlueprintBoard, self).__init__(owner)
-        s = ship_parts_supply    
-        self.base_stats = {
-            'interceptor':  {
-                            'initiative' : 2,
-                            'computer' : 0,
-                            'energy' : 0
-                            },
-            'cruiser':      {
-                            'initiative' : 1,
-                            'computer' : 0,
-                            'energy' : 0
-                            },
-            'dreadnought':  {
-                            'initiative' : 0,
-                            'computer' : 0,
-                            'energy' : 0
-                            },
-            'starbase':     {
-                            'initiative' : 4,
-                            'computer' : 0,
-                            'energy' : 3
-                            }
-        }
-        
-        self.ship_blueprints_default = {
-                'interceptor':[
-                    None,
-                    s.get('ion cannon'),
-                    s.get('nuclear source'),
-                    s.get('nuclear drive')
-                ],
-                'cruiser':[
-                    s.get('hull'),
-                    None,
-                    s.get('ion cannon'),
-                    s.get('nuclear source'),
-                    s.get('electron computer'),
-                    s.get('nuclear drive')
-                ],
-                'dreadnought':[
-                    s.get('ion cannon'),
-                    s.get('hull'),
-                    None,
-                    s.get('hull'),
-                    s.get('nuclear source'),
-                    s.get('ion cannon'),
-                    s.get('electron computer'),
-                    s.get('nuclear drive')
-                ],
-                'starbase':[
-                    s.get('hull'),
-                    s.get('ion cannon'),
-                    s.get('hull'),
-                    None,
-                    s.get('electron computer')
-                ]
-            }
-        
-        self.ship_blueprints = {
-            'interceptor':[None for dummy in range(4)],
-            'cruiser':[None for dummy in range(6)],
-            'dreadnought':[None for dummy in range(8)],
-            'starbase':[None for dummy in range(5)]
-        }   
-        
-        if owner.faction.name == 'orion hegemony':
-            self.base_stats['interceptor']['initiative'] = 3
-            self.base_stats['interceptor']['energy'] = 1
-            self.base_stats['cruiser']['initiative'] = 2
-            self.base_stats['cruiser']['energy'] = 2
-            self.base_stats['dreadnought']['initiative'] = 1
-            self.base_stats['dreadnought']['energy'] = 3
-            self.base_stats['starbase']['initiative'] = 5
-            self.base_stats['starbase']['energy'] = 3           
-            
-            self.ship_blueprints_default['interceptor'][0] = s.get('gauss shield')
-            self.ship_blueprints_default['cruiser'][1] = s.get('gauss shield')
-            self.ship_blueprints_default['dreadnought'][2] = s.get('gauss shield')
-            self.ship_blueprints_default['starbase'][3] = s.get('gauss shield')
-        
-        elif owner.faction.name == 'eridani empire':            
-            self.base_stats['dreadnought']['energy'] = 1
-            
-        elif owner.faction.name == 'planta':
-            self.base_stats['interceptor']['energy'] = 2
-            self.base_stats['interceptor']['computer'] = 1
-            self.base_stats['interceptor']['initiative'] = 0
-            self.base_stats['cruiser']['energy'] = 2
-            self.base_stats['cruiser']['computer'] = 1
-            self.base_stats['cruiser']['initiative'] = 0
-            self.base_stats['dreadnought']['energy'] = 2
-            self.base_stats['dreadnought']['computer'] = 1
-            self.base_stats['starbase']['initiative'] = 2
-            self.base_stats['starbase']['energy'] = 5
-            self.base_stats['starbase']['computer'] = 1
-            
-            self.ship_blueprints_default = {
-                    'interceptor':[
-                        s.get('ion cannon'),
-                        s.get('nuclear source'),
-                        s.get('nuclear drive')
-                    ],
-                    'cruiser':[
-                        s.get('hull'),
-                        s.get('ion cannon'),
-                        s.get('nuclear source'),
-                        None,
-                        s.get('nuclear drive')
-                    ],
-                    'dreadnought':[
-                        s.get('ion cannon'),
-                        s.get('hull'),
-                        s.get('hull'),
-                        s.get('nuclear source'),
-                        s.get('ion cannon'),
-                        None,
-                        s.get('nuclear drive')
-                    ],
-                    'starbase':[
-                        s.get('hull'),
-                        s.get('ion cannon'),
-                        s.get('hull'),
-                        s.get('electron computer')
-                    ]
-                }          
+        self.base_stats = {}
+        self.ship_blueprints = {}
+        self.stats = Set(('initiative', 'movement', 'computer', 'shield', 'hull', 'cannon1', 'cannon2', 'cannon4', 'missile2', 'energy'))
+        for unit in owner.faction.blueprints:
+            self.base_stats[unit] = {}
+            for stat in owner.faction.blueprints[unit]:
+                self.base_stats[unit][stat] = owner.faction.blueprints[unit][stat]
+                if stat != 'default':
+                    self.stats.add(stat)
+            if self.base_stats[unit].has_key('default'):
+                self.ship_blueprints[unit] = [None for dummy in range(len(self.base_stats[unit]['default']))]
+
             
     def get_stats(self, ship_name):
         """Calculate the blueprint statistics for one particular ship type."""
-        stats = {
-        'initiative' : self.base_stats[ship_name]['initiative'],
-        'movement' : 0,
-        'computer' : self.base_stats[ship_name]['computer'],
-        'shield' : 0 ,
-        'hull' : 0,
-        'cannon1' : 0,
-        'cannon2' : 0,
-        'cannon4' : 0,
-        'missile2' : 0,
-        'energy' : self.base_stats[ship_name]['energy']
-        }       
-        for ship_part_tile_default, ship_part_tile in zip(self.ship_blueprints_default[ship_name], 
+        result = {}
+        for stat in self.stats:
+            result[stat] = self.base_stats[ship_name][stat] if self.base_stats[ship_name].has_key(stat) else 0
+
+        for ship_part_tile_default, ship_part_tile in zip(self.base_stats[ship_name]['default'], 
                                                           self.ship_blueprints[ship_name]):
             if ship_part_tile is None:
-                if ship_part_tile_default is not None:
-                    sp = ship_part_tile_default                
+                if ship_part_tile_default != 'Missing' and ship_part_tile_default != 'Empty':
+                    sp = shipparts.ship_parts[ship_part_tile_default]
                 else:
                     continue
-            else:
-                print ship_part_tile.name
+            elif ship_part_tile_default != 'Missing':
                 sp = ship_part_tile
-                
-            stats['initiative'] += sp.initiative
-            stats['movement'] += sp.movement
-            stats['computer'] += sp.computer
-            stats['shield'] += sp.shield
-            stats['hull'] += sp.hull            
+
+            result['initiative'] += sp.initiative
+            result['movement'] += sp.movement
+            result['computer'] += sp.computer
+            result['shield'] += sp.shield
+            result['hull'] += sp.hull            
             if sp.missile:
-                stats['missile2'] += sp.n_dice
+                result['missile2'] += sp.n_dice
             elif sp.hits > 0:
-                stats['cannon' + str(sp.hits)] += sp.n_dice            
-            stats['energy'] += sp.energy_produced - sp.energy_consumed
+                result['cannon' + str(sp.hits)] += sp.n_dice            
+            result['energy'] += sp.energy
             
-        return stats
+        return result
             
     def get_ship_parts(self, ship_name):
         """Get a list of all the active ship parts"""
@@ -479,14 +359,6 @@ class ReputationTrack(Zone):
 class ResearchTrack(Zone):
     pass
 
-class ShipPartsTilesSupply(Zone):
-    def __init__(self, ship_parts):
-        super(ShipPartsTilesSupply, self).__init__(self)
-        self.supply = dict([(sp.name, sp) for sp in ship_parts])
-
-    def get(self, ship_part_name):
-        """Return the ship part tile with the specified given name"""
-        return self.supply[ship_part_name]
     
 class PersonalSupply(Zone):
     """

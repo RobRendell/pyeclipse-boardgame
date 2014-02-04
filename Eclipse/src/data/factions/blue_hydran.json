@@ -1,6 +1,7 @@
 {
     "name": "Hydran Progress",
     "color": "blue",
+    "board": "player_board_blue_alien.jpg",
     "actions": [ "explore1", "influence2_2", "research2", "upgrade2", "build2", "move2" ],
     "trade": 3,
     "sector": 224,

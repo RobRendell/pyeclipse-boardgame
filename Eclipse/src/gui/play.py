@@ -483,11 +483,7 @@ class PlayerBoardLayer(Layer):
         self.add(Label('PlayerBoardLayer'))
         width, height = director.get_window_size()
         position = (width/2, height/2)
-        picture_name = 'player_board_' +\
-                        player.color +\
-                        ('_terran' if 'terran' in player.faction.name else '_alien') +\
-                        '.jpg'
-        player_board_sprite = BackgroundSprite(picture_name,
+        player_board_sprite = BackgroundSprite(str(player.faction.board),
                                      position = position                              
                                      )
         self.add(player_board_sprite)

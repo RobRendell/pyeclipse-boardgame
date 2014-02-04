@@ -1,6 +1,7 @@
 {
     "name": "Planta",
     "color": "green",
+    "board": "player_board_green_alien.jpg",
     "actions": [ "explore2", "influence2_2", "research1", "upgrade2", "build2", "move2" ],
     "trade": 3,
     "sector": 226,
@@ -17,25 +18,25 @@
     "starting_influence": 13,
     "blueprints": {
 	"interceptor": {
-	    "default": [ null, "Ion Cannon", "Nuclear Source", "Nuclear Drive" ],
+	    "default": [ "Missing", "Ion Cannon", "Nuclear Source", "Nuclear Drive" ],
 	    "computer": 1,
 	    "energy": 2,
 	    "cost": 3
 	},
 	"cruiser": {
-	    "default": [ "Hull", null, "Ion Cannon", "Nuclear Source", "Empty", "Nuclear Drive" ],
+	    "default": [ "Hull", "Missing", "Ion Cannon", "Nuclear Source", "Empty", "Nuclear Drive" ],
 	    "computer": 1,
 	    "energy": 2,
 	    "cost": 5
 	},
 	"dreadnought": {
-	    "default": [ "Ion Cannon", "Hull", "Hull", "Nuclear Source", null, "Ion Cannon", "Empty", "Nuclear Drive" ],
+	    "default": [ "Ion Cannon", "Hull", "Hull", "Nuclear Source", "Missing", "Ion Cannon", "Empty", "Nuclear Drive" ],
 	    "computer": 1,
 	    "energy": 2,
 	    "cost": 8
 	},
 	"starbase": {
-	    "default": [ "Hull", "Ion Cannon", "Hull", null, "Electron Computer" ],
+	    "default": [ "Hull", "Ion Cannon", "Hull", "Missing", "Electron Computer" ],
 	    "initiative": 2,
 	    "energy": 5,
 	    "cost": 3

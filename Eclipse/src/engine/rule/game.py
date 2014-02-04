@@ -23,9 +23,6 @@ class Game(object):
             factions = [faction for faction in factions if faction.color != rand_faction.color]
             self.players.append(pl.Player(rand_faction))
 
-        #setting the ship part tiles reserver
-        self.ship_parts_supply = zn.ShipPartsTilesSupply(sp.ship_parts)
-
         #create the bag of technology tiles
         self.technology_tiles_bag = zn.Bag(tt.technology_tiles)
 
@@ -66,7 +63,7 @@ class Game(object):
         
         #assign a personal board, a starting hex and a personal supply to each player
         for n, player in enumerate(self.players):
-            player.personal_board = zn.PlayerBoard(player, self.ship_parts_supply)
+            player.personal_board = zn.PlayerBoard(player)
             player.starting_hex = dict([(h.id, h) for h in st.starting_hexes])[player.faction.sector]
                               
             player.personal_supply = zn.PersonalSupply(player)

@@ -27,9 +27,11 @@ Things TODO
 
 * Cleanup phase.
 
-* I'd prefer species to be separate files, rather than all in one file.  I'd also prefer ship blueprints to be stored in the species data rather than hard-coded.
-
 Done
 ====
 
-* Make action board on main UI race-specific
+* Scrolling UI now handles arbitrary resizes, using the whole window.
+
+* Action board on main UI changes to match the current player's species
+
+* Species data is in separate json files, including their ship blueprints

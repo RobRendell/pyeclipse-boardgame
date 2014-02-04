@@ -1,6 +1,7 @@
 {
     "name": "Orion Hegemony",
     "color": "black",
+    "board": "player_board_black_alien.jpg",
     "actions": [ "explore1", "influence2_2", "research1", "upgrade2", "build2", "move2" ],
     "trade": 4,
     "sector": 232,

@@ -1,6 +1,7 @@
 {
     "name": "Descendants of Draco",
     "color": "yellow",
+    "board": "player_board_yellow_alien.jpg",
     "actions": [ "explore1_1", "influence2_2", "research1", "upgrade2", "build2", "move2" ],
     "trade": 3,
     "sector": 228,

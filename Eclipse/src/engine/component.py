@@ -16,11 +16,11 @@ class PersonalComponent(Component):
 
 class SectorTile(Component):
     """An hexagon tile."""
-    def __init__(self, id, name, victory_points, n_money = 0, nr_money = 0,
+    def __init__(self, hex_id, name, victory_points, n_money = 0, nr_money = 0,
     n_science = 0, nr_science = 0, n_material = 0, nr_material = 0, n_wild = 0,
     discovery = False, n_ancients = 0, artifact = False, wormhole1 = 0,
     wormhole2 = 0, wormhole3 = 0, wormhole4 = 0, wormhole5 = 0, wormhole6 = 0,):
-        self.id = id
+        self.id = hex_id
         self.name = name
         self.victory_points = victory_points
         self.n_money = n_money
@@ -43,22 +43,21 @@ class SectorTile(Component):
 
 class TechnologyTile(Component):
     """A research tile."""
-    def __init__(self, name, cost = None, min_cost = None, category = None, type = None):
+    def __init__(self, name, cost = None, min_cost = None, category = None, tech_type = None):
         """
-        type is either ship_part, build, instant or None
+        tech_type is either ship_part, build, instant or None
         category is either military, grid or nano
         """
         self.name = name
         self.cost = cost
         self.min_cost = min_cost
-        self.type = type
+        self.type = tech_type
         self.category = category
 
 class ShipPartTile(Component):
     def __init__(self, name, technology_required = False, initiative = 0,
-    movement = 0, computer = 0, shield =0, hull = 0, missile = False,
-    energy_produced = 0, energy_consumed = 0, hits = 1, n_dice = 0,
-    discovery = False):
+    movement = 0, computer = 0, shield = 0, hull = 0, missile = False,
+    energy = 0, hits = 1, n_dice = 0, discovery = False):
         self.name = name
         self.technology_required = technology_required
         self.initiative = initiative
@@ -67,26 +66,24 @@ class ShipPartTile(Component):
         self.shield = shield
         self.hull = hull
         self.missile = missile
-        self.energy_produced = energy_produced
-        self.energy_consumed = energy_consumed
+        self.energy = energy
         self.hits = hits
         self.n_dice = n_dice
         self.discovery = discovery
 
 class DiscoveryTile(Component):
-    def __init__(self, type, money = 0, science = 0, material = 0,
+    def __init__(self, discover_type, money = 0, science = 0, material = 0,
     ship_part_name = None, initiative = 0, movement = 0, computer = 0,
-    shield = 0, hull = 0, missile = False, energy_produced = 0,
-    energy_consumed = 0, hits = 0, n_dice = 0):
+    shield = 0, hull = 0, missile = False, energy = 0, hits = 0, n_dice = 0):
 
-        self.type = type
-        if type == 'resource':
+        self.type = discover_type
+        if self.type == 'resource':
             self.money = money
             self.science = science
             self.material = material
-        elif type == 'tech' or type == 'cruiser':
+        elif self.type == 'tech' or self.type == 'cruiser':
             pass
-        elif type == 'ship_part':
+        elif self.type == 'ship_part':
             self.ship_part_tile = ShipPartTile(
                 ship_part_name,
                 False,
@@ -96,8 +93,7 @@ class DiscoveryTile(Component):
                 shield,
                 hull,
                 missile,
-                energy_produced,
-                energy_consumed,
+                energy,
                 hits,
                 n_dice,
                 True

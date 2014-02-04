@@ -1,6 +1,7 @@
 {
     "name": "Mechanema",
     "color": "white",
+    "board": "player_board_white_alien.jpg",
     "actions": [ "explore1", "influence2_2", "research1", "upgrade3", "build3", "move2" ],
     "trade": 3,
     "sector": 230,

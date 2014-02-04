@@ -1,11 +1,12 @@
-import os.path
-from engine.component import ShipPartTile
 import csv
+
+from engine.component import ShipPartTile
+
 
 __author__="jglouis"
 __date__ ="$Dec 22, 2011 1:55:59 PM$"
 
-ship_parts = []
+ship_parts = {}
 
 def create_ship_part_tile(row):
     return ShipPartTile(
@@ -19,16 +20,17 @@ def create_ship_part_tile(row):
         row[7] == 'True',
         int(row[8]),
         int(row[9]),
-        int(row[10]),
-        int(row[11])
+        int(row[10])
     )
 
-reader = csv.reader(open('data/shipparts.csv'), delimiter = ';')
+def load_ship_part_file(file_name):
+    reader = csv.reader(open(file_name), delimiter = ';')
+    #skip the first line
+    reader.next()
+    for row in reader:
+        tile = create_ship_part_tile(row)
+        ship_parts[tile.name] = tile
+    print len(ship_parts), 'ship parts tile loaded...'
 
-#skip the first line
-reader.next()
+load_ship_part_file('data/shipparts.csv')
 
-for row in reader:
-    ship_parts.append(create_ship_part_tile(row))
-
-print len(ship_parts), 'ship parts tile loaded...'

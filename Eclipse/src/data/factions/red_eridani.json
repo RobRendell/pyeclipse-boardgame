@@ -1,6 +1,7 @@
 {
     "name": "Eridani Empire",
     "color": "red",
+    "board": "player_board_red_alien.jpg",
     "actions": [ "explore1", "influence2_2", "research1", "upgrade2", "build2", "move2" ],
     "trade": 3,
     "sector": 222,

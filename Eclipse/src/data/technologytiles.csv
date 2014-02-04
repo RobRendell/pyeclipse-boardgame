@@ -1,25 +1,25 @@
 name;cost;min_cost;category;type;number
-neutron bombs;2;2;military;constant;4
-starbase;4;3;military;build;4
-plasma cannon;6;4;military;ship_part;4
-phase shield;8;5;military;ship_part;4
-advanced mining;10;6;military;constant;4
-tachyon source;12;6;military;ship_part;4
-plasma missile;14;7;military;ship_part;4
-gluon computer;16;8;military;ship_part;4
-gauss shield;2;2;grid;ship_part;4
-improved hull;4;3;grid;ship_part;4
-fusion source;6;4;grid;ship_part;4
-positron computer;8;5;grid;ship_part;4
-advanced economy;10;6;grid;constant;4
-tachyon drive;12;6;grid;ship_part;4
-antimatter cannon;14;7;grid;ship_part;4
-quantum grid;16;8;grid;instant;4
-nanorobots;2;2;nano;constant;4
-fusion drive;4;3;nano;ship_part;4
-advance robotics;6;4;nano;instant;4
-orbital;8;5;nano;build;4
-advanced labs;10;6;nano;constant;4
-monolith;12;6;nano;build;4
-artifact key;14;7;nano;instant;4
-wormhole generator;16;8;nano;constant;4
+Neutron Bombs;2;2;military;constant;4
+Starbase;4;3;military;build;4
+Plasma Cannon;6;4;military;ship_part;4
+Phase Shield;8;5;military;ship_part;4
+Advanced Mining;10;6;military;constant;4
+Tachyon Source;12;6;military;ship_part;4
+Plasma Missile;14;7;military;ship_part;4
+Gluon Computer;16;8;military;ship_part;4
+Gauss Shield;2;2;grid;ship_part;4
+Improved Hull;4;3;grid;ship_part;4
+Fusion Source;6;4;grid;ship_part;4
+Positron Computer;8;5;grid;ship_part;4
+Advanced Economy;10;6;grid;constant;4
+Tachyon Drive;12;6;grid;ship_part;4
+Antimatter Cannon;14;7;grid;ship_part;4
+Quantum Grid;16;8;grid;instant;4
+Nanorobots;2;2;nano;constant;4
+Fusion Drive;4;3;nano;ship_part;4
+Advance Robotics;6;4;nano;instant;4
+Orbital;8;5;nano;build;4
+Advanced Labs;10;6;nano;constant;4
+Monolith;12;6;nano;build;4
+Artifact Key;14;7;nano;instant;4
+Wormhole Generator;16;8;nano;constant;4
