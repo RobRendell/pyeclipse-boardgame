@@ -27,6 +27,10 @@ Things TODO
 
 * Cleanup phase.
 
+* Make main menu react in some fashion when you hit 'New Game', since it takes a while to actually launch.
+
+* Game crashes if you try to claim a hex when you're out of influence discs
+
 Done
 ====
 
