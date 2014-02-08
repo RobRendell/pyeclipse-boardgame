@@ -93,7 +93,6 @@ def get_physical_coordinates(x, y):
     p_x, p_y = get_physical_dimensions(x, y)
     return (director._offset_x + p_x, director._offset_y + p_y)
 
-
 class SelectableSprite(Sprite):
     """
     A sprite that is linked to a zone/component of the game.
@@ -123,6 +122,25 @@ class AnchorSprite(Sprite):
         else:
             pixel_anchor = (int(image.width * anchor[0]), int(image.height * anchor[1]))
         super(AnchorSprite, self).__init__(image, anchor = pixel_anchor, **kwargs)
+
+    def adjust_for_parents(self, ancestor):
+        if ancestor.parent is not None:
+            result = self.adjust_for_parents(ancestor.parent)
+        else:
+            result = (0, 0, 1.)
+        return (result[0] + ancestor.x * result[2], result[1] + ancestor.y * result[2], ancestor.scale * result[2])
+
+    def contains(self, x, y):
+        adjust = self.adjust_for_parents(self.parent)
+        x = (x - adjust[0]) / adjust[2]
+        y = (y - adjust[1]) / adjust[2]
+        sx, sy = self.position
+        ax, ay = self.image_anchor
+        sx -= ax * self.scale
+        sy -= ay * self.scale
+        if x < sx or x > sx + self.width: return False
+        if y < sy or y > sy + self.height: return False
+        return True
 
 class ClipLayer(Layer):
     
@@ -684,44 +702,14 @@ class HudLayer(Layer):
         super(HudLayer, self).__init__()
         self.game = game
         
-        # hud scale        
+        # hud scale
         self.scale_hud = min(director.get_window_size()[0] / 1920.0, director.get_window_size()[1] / 1080.0)
-        
-        self.action_board_layer = Layer()
-        self.action_board_layer.position = (director.get_window_size()[0], 0)
-        self.add(self.action_board_layer)
-        self.action_board_blank = AnchorSprite('boards/action_board.png', anchor = (1.0, 0), scale = 0.3 * self.scale_hud)
-        self.action_board_layer.add(self.action_board_blank, -1)
-        self.action_sprites = {}
-        self.action_list = ('Explore',
-                            'Influence',
-                            'Research',
-                            'Upgrade',
-                            'Build',
-                            'Move'
-                            )
-        self.action_position = [0.2, 1.12, 2.05, 3, 3.95, 4.9]
-        self.selection_sprite = AnchorSprite('action_selection_halo.png',
-                                             scale = 0.3 * self.scale_hud,
-                                             anchor = (0.5, 0),
-                                             position = self.action_board_layer.position)
-        
-        scale = 1.2 * self.scale_hud
-        self.influence_track_layer = ClipLayer(Rect(int(scale * -240), 0, int(scale * 240), int(scale * 104)),
-                                               position = (director.get_window_size()[0], self.action_board_blank.height))
-        self.add(self.influence_track_layer)
-        self.influence_track_sprite = AnchorSprite('boards/influence_track.png',
-                                                   anchor = (1.0, 0),
-                                                   scale = scale)
-        self.influence_track_layer.add(self.influence_track_sprite)
-        self.influence_disc_sprite = []
-        for count in range(13):
-            position = (79 * count - 1000, 60)
-            self.influence_disc_sprite.append(Sprite('influence white.png',
-                                      position = position,
-                                      scale = 0.8))
-            self.influence_track_sprite.add(self.influence_disc_sprite[count])
 
+        self.action_board = ActionBoardLayer(position = (director.get_window_size()[0], 0), scale = 0.3 * self.scale_hud)
+        self.add(self.action_board)
+
+        self.influence_layer = HudInfluenceTrackLayer(scale = 1.2 * self.scale_hud)
+        self.add(self.influence_layer)
         
         self.turn_button = Sprite('turn_button.png',
                                   anchor = (0, 0),
@@ -756,10 +744,9 @@ class HudLayer(Layer):
     def do_resize(self, virtual_offset_x, virtual_offset_y):
         rhs, top = director.get_window_size()
         self.fleet_manager_frame.position = (rhs + virtual_offset_x, top + virtual_offset_y)
-        self.action_board_layer.position = (rhs + virtual_offset_x, -virtual_offset_y)
+        self.action_board.position = (rhs + virtual_offset_x, -virtual_offset_y)
         self.turn_button.position = (-virtual_offset_x, -virtual_offset_y)
-        self.selection_sprite.y = -virtual_offset_y
-        self.influence_track_layer.position = (rhs + virtual_offset_x, self.action_board_blank.height - virtual_offset_y)
+        self.influence_layer.position = (rhs + virtual_offset_x, self.action_board.get_height() - virtual_offset_y)
         
     def update_fleet(self, ships):
         # refresh the frame
@@ -810,19 +797,13 @@ class HudLayer(Layer):
 
     def on_mouse_press(self, x, y, button, modifiers): 
         x, y = director.get_virtual_coordinates(x, y)
-        rect = self.action_board_blank.get_AABB()
-        rect.right = self.action_board_layer.position[0]
-        if rect.contains(x, y):
-            dx = (rect.right - rect.left) / 6.0
-            for n in range(6):
-                if rect.left + dx * n < x < rect.left + dx * (n + 1):
-                    self.parent.hud_layer.set_info('Select Action: ' + self.action_list[n])
-                    self.add(self.selection_sprite, z = 2)
-                    self.selection_sprite.x = rect.left + (self.action_position[n] + 0.5) * dx 
-                    self.selection_sprite.color = color_convert(self.game.current_player.color)
-                    return EVENT_HANDLED
-        elif self.turn_button.get_AABB().contains(x, y):
+        if self.turn_button.contains(x, y):
             self.end_turn()
+            return EVENT_HANDLED
+        elif self.influence_layer.click_current_disc(x, y, self.game.current_player):
+            print 'clicked current disc'
+        elif self.action_board.on_mouse_press(x, y, self.game.current_player):
+            print 'clicked action board'
             return EVENT_HANDLED
         
     def end_turn(self):
@@ -831,30 +812,98 @@ class HudLayer(Layer):
         
     def refresh_current_player(self):
         self.turn_button.color = color_convert(self.game.current_player.color)
-        self.refresh_action_board()
+        self.action_board.refresh(self.game.current_player)
         self.refresh_influence_track()
-        
-    def refresh_action_board(self):
-        for action in self.action_sprites:
-            self.action_sprites[action].visible = False
-        for action in self.game.current_player.faction.actions:
-            if not self.action_sprites.has_key(action):
-                image = 'image/boards/action_' + action + '.png'
-                sprite = AnchorSprite(image, anchor = (1.0, 0), scale = 0.3 * self.scale_hud)
-                self.action_board_layer.add(sprite)
-                self.action_sprites[action] = sprite
-            self.action_sprites[action].visible = True
             
     def refresh_influence_track(self):
-        n_influence = len(self.game.current_player.personal_board.influence_track.get_components())
-        left = self.influence_track_sprite.scale * (8 + 80 * (12 - n_influence))
-        for count in range(13):
-            self.influence_disc_sprite[count].color = color_convert(self.game.current_player.color)
-            self.influence_disc_sprite[count].visible = (count < n_influence)
-        self.influence_track_sprite.do(MoveTo((int(left), 0), duration = 0.5))
+        self.influence_layer.refresh(self.game.current_player)
 
+class ActionBoardLayer(Layer):
+    def __init__(self, position = (0, 0), scale = 1.0):
+        super(ActionBoardLayer, self).__init__()
+        self.position = position
+        self.action_board_blank = AnchorSprite('boards/action_board.png',
+                                               anchor = (1.0, 0),
+                                               scale = scale)
+        self.add(self.action_board_blank, -1)
+        self.action_sprites = {}
+        self.action_list = ('Explore',
+                            'Influence',
+                            'Research',
+                            'Upgrade',
+                            'Build',
+                            'Move'
+                            )
+        self.action_position = [0.2, 1.12, 2.05, 3, 3.95, 4.9]
+        self.selection_sprite = AnchorSprite('action_selection_halo.png',
+                                             scale = scale,
+                                             anchor = (0.5, 0),
+                                             position = position)
         
-                   
+
+    def get_height(self):
+        return self.action_board_blank.height
+
+    def refresh(self, current_player):
+        for action in self.action_sprites:
+            self.action_sprites[action].visible = False
+        for action in current_player.faction.actions:
+            if not self.action_sprites.has_key(action):
+                image = 'image/boards/action_' + action + '.png'
+                sprite = AnchorSprite(image, anchor = (1.0, 0), scale = self.action_board_blank.scale)
+                self.add(sprite)
+                self.action_sprites[action] = sprite
+            self.action_sprites[action].visible = True
+
+    def on_mouse_press(self, x, y, current_player):
+        rect = self.action_board_blank.get_AABB()
+        rect.right = self.position[0]
+        if rect.contains(x, y):
+            dx = rect.width / 6.0
+            for n in range(6):
+                if rect.left + dx * n < x < rect.left + dx * (n + 1):
+                    self.parent.set_info('Select Action: ' + self.action_list[n])
+                    self.add(self.selection_sprite, z = 2)
+                    self.selection_sprite.x = (self.action_position[n] + 0.5) * dx - rect.width
+                    self.selection_sprite.color = color_convert(current_player.color)
+                    return True
+        return False
+
+class HudInfluenceTrackLayer(ClipLayer):
+    def __init__(self, scale = 1.0):
+        super(HudInfluenceTrackLayer, self).__init__(Rect(int(scale * -240), 0, int(scale * 240), int(scale * 104)))
+        track = pyglet.resource.image('boards/influence_track.png')
+        self.size = (track.width, track.height)
+        self.influence_track_sprite = AnchorSprite(track,
+                                                   anchor = (1.0, 0),
+                                                   scale = scale)
+        self.add(self.influence_track_sprite)
+        self.influence_disc_sprite = []
+        for count in range(13):
+            self.influence_disc_sprite.append(AnchorSprite('influence white.png',
+                                                            anchor = (0.5, 0.5),
+                                                            position = self.get_disc_position(count),
+                                                            scale = 0.8))
+            self.influence_track_sprite.add(self.influence_disc_sprite[count])
+
+    def get_disc_position(self, n):
+        width = self.size[0] * 0.9
+        offset_x = (self.size[0] - width) / 2
+        return (offset_x + width * n / 12 - self.size[0], self.size[1] * 0.55)
+
+    def refresh(self, current_player):
+        n_influence = len(current_player.personal_board.influence_track.get_components())
+        for count in range(13):
+            self.influence_disc_sprite[count].color = color_convert(current_player.color)
+            self.influence_disc_sprite[count].visible = (count < n_influence)
+        left = int(self.get_disc_position(24.8 - n_influence)[0]*self.influence_track_sprite.scale)
+        self.influence_track_sprite.do(MoveTo((left, 0), duration = 0.5))
+
+    def click_current_disc(self, x, y, current_player):
+        n_influence = len(current_player.personal_board.influence_track.get_components())
+        return n_influence > 0 and self.influence_disc_sprite[n_influence - 1].contains(x, y)
+
+
 class PopUpLayer(Layer):
     """
     Layer that is meant to contain pop up menus. When a pop up menu appears, all keypad/mouse events are intercepted
