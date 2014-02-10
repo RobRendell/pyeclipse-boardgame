@@ -31,6 +31,8 @@ Things TODO
 
 * Game crashes if you try to claim a hex when you're out of influence discs
 
+* Drag disc off action board if no action actually taken yet
+
 Done
 ====
 

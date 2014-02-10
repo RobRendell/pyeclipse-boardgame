@@ -100,6 +100,7 @@ class PlayerBoard(Zone):
         self.population_track = PopulationTrack(owner)
         self.population_cemetery = PopulationCemetery(owner)
         self.influence_track = InfluenceTrack(owner)
+        self.action_board = ActionBoard(owner)
         self.technology_track = TechnologyTrack(owner)
         self.faction = owner.faction
     
@@ -222,17 +223,8 @@ class BlueprintBoard(Zone):
         result = {}
         for stat in self.stats:
             result[stat] = self.base_stats[ship_name][stat] if self.base_stats[ship_name].has_key(stat) else 0
-
-        for ship_part_tile_default, ship_part_tile in zip(self.base_stats[ship_name]['default'], 
-                                                          self.ship_blueprints[ship_name]):
-            if ship_part_tile is None:
-                if ship_part_tile_default != 'Missing' and ship_part_tile_default != 'Empty':
-                    sp = shipparts.ship_parts[ship_part_tile_default]
-                else:
-                    continue
-            elif ship_part_tile_default != 'Missing':
-                sp = ship_part_tile
-
+        ship_parts = self.get_ship_parts(ship_name)
+        for sp in ship_parts:
             result['initiative'] += sp.initiative
             result['movement'] += sp.movement
             result['computer'] += sp.computer
@@ -249,18 +241,16 @@ class BlueprintBoard(Zone):
     def get_ship_parts(self, ship_name):
         """Get a list of all the active ship parts"""
         ship_parts = []
-        for ship_part_tile_default, ship_part_tile in zip(self.ship_blueprints_default[ship_name], 
+        for ship_part_tile_default, ship_part_tile in zip(self.base_stats[ship_name]['default'], 
                                                           self.ship_blueprints[ship_name]):
             if ship_part_tile is None:
-                if ship_part_tile_default is not None:
-                    sp = ship_part_tile_default                
+                if ship_part_tile_default != 'Missing' and ship_part_tile_default != 'Empty':
+                    sp = shipparts.ship_parts[ship_part_tile_default]
                 else:
                     continue
-            else:
-                print ship_part_tile.name
+            elif ship_part_tile_default != 'Missing':
                 sp = ship_part_tile
             ship_parts.append(sp)
-            
         return ship_parts        
 
 class ResourceTrack(Zone):
@@ -304,6 +294,24 @@ class PopulationCemetery(Zone):
 class InfluenceTrack(Zone):
     pass
 
+class ActionBoard(Zone):
+    action_names = ('Explore', 'Influence', 'Research', 'Upgrade', 'Build', 'Move')
+    
+    def __init__(self, owner):
+        super(ActionBoard, self).__init__(owner)
+        self.places = {}
+        for action in self.action_names:
+            self.places[action] = Zone(owner)
+
+    def add(self, action, component):
+        self.places[action].add(component)
+        
+    def take(self, action, component = None, component_type = None):
+        return self.places[action].take(component = component, component_type = component_type)
+    
+    def get_components(self, action, component_type = None):
+        return self.places[action].get_components(component_type = component_type)
+
 class TechnologyTrack(Zone):
     def __init__(self, owner):
         super(TechnologyTrack, self).__init__(owner)
@@ -332,19 +340,30 @@ class ReputationTrack(Zone):
         }
         self.reputation_max = owner.faction.reputation_only + owner.faction.reputation_diplomacy
         self.diplomacy_max = owner.faction.diplomacy_only + owner.faction.reputation_diplomacy
+        self.tile_max = owner.faction.diplomacy_only + owner.faction.reputation_diplomacy + owner.faction.reputation_diplomacy
 
     def add(self, component):
         """
         Add a reputation tile or an ambassador to the track if there is space
         available.
         """
-        if len(self.track['reputation']) + len(self.track['diplomacy']) <= 5:
+        if len(self.track['reputation']) + len(self.track['diplomacy']) < self.tile_max:
             if isinstance(component, cp.ReputationTile):
                 if len(self.track['reputation']) < self.reputation_max:
-                    self.track['reputation'].append('reputation')
+                    self.track['reputation'].append(component)
             elif isinstance(component, cp.AmbassadorTile):
                 if len(self.track['diplomacy']) < self.diplomacy_max:
-                    self.track['diplomacy'].append('reputation')
+                    self.track['diplomacy'].append(component)
+
+    def is_diplomacy_full(self):
+        """Return true if there is no more room for diplomacy components."""
+        return (len(self.track['reputation']) + len(self.track['diplomacy']) >= self.tile_max or
+                len(self.track['diplomacy']) >= self.diplomacy_max)
+
+    def is_reputation_full(self):
+        """Return true if there is no more room for reputation components."""
+        return (len(self.track['reputation']) + len(self.track['diplomacy']) >= self.tile_max or
+                len(self.track['reputation']) >= self.reputation_max)
 
     def remove(self, component):
         """Remove a component from the reputation track."""
@@ -356,16 +375,13 @@ class ReputationTrack(Zone):
     def get_components(self):
         return self.track
 
-class ResearchTrack(Zone):
-    pass
-
     
 class PersonalSupply(Zone):
     """
     The personal supply is meant to contain all the components owned by a player
     that are not yet on the board nor on the player board. Components like
-    ambassadors, ships and colony ships are by default in this zone at the start
-    of the game.
+    ambassadors, ships, spare influence discs and colony ships are by default
+    in this zone at the start of the game.
     """
     def take(self, component = None, component_type = None):
         if component is None and component_type is None:

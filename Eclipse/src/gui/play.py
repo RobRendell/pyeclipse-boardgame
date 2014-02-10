@@ -17,7 +17,7 @@ from cocos.sprite import Sprite
 from hexmanager import HexManager
 from cocos.actions.base_actions import IntervalAction
 import random
-from engine.zone import Sector, ResourceSlot
+from engine.zone import Sector, ResourceSlot, ActionBoard
 from engine.component import InfluenceDisc, Ship, Interceptor, Cruiser, Dreadnought, Starbase, \
     AncientShip, GalacticCenterDefenseSystem, DiscoveryTile, PopulationCube
 from pyglet.window.mouse import RIGHT
@@ -25,12 +25,11 @@ from pyglet.event import EVENT_HANDLED
 from cocos.rect import Rect
 from pyglet.window.key import B, R, _1, P, MOD_CTRL
 from cocos.batch import BatchNode
-from cocos.actions.interval_actions import Rotate, MoveTo
+from cocos.actions.interval_actions import Rotate, MoveTo, FadeOut
 from cocos.menu import Menu, MenuItem, zoom_in, zoom_out, shake, ColorMenuItem, fixedPositionMenuLayout, LEFT, TOP, \
     BOTTOM, verticalMenuLayout
 from pyglet.gl.gl import glViewport, glMatrixMode, glLoadIdentity, GL_PROJECTION, \
     GL_MODELVIEW, glOrtho
-from pyglet.gl.glu import gluPerspective, gluLookAt
 
 pyglet.resource.path.append('./image')
 pyglet.resource.path.append('./image/boards')
@@ -93,6 +92,15 @@ def get_physical_coordinates(x, y):
     p_x, p_y = get_physical_dimensions(x, y)
     return (director._offset_x + p_x, director._offset_y + p_y)
 
+
+def adjust_for_parents(ancestor):
+    if ancestor.parent is not None:
+        result = adjust_for_parents(ancestor.parent)
+    else:
+        result = (0, 0, 1.)
+    return (result[0] + ancestor.x * result[2], result[1] + ancestor.y * result[2], ancestor.scale * result[2])
+
+
 class SelectableSprite(Sprite):
     """
     A sprite that is linked to a zone/component of the game.
@@ -123,15 +131,8 @@ class AnchorSprite(Sprite):
             pixel_anchor = (int(image.width * anchor[0]), int(image.height * anchor[1]))
         super(AnchorSprite, self).__init__(image, anchor = pixel_anchor, **kwargs)
 
-    def adjust_for_parents(self, ancestor):
-        if ancestor.parent is not None:
-            result = self.adjust_for_parents(ancestor.parent)
-        else:
-            result = (0, 0, 1.)
-        return (result[0] + ancestor.x * result[2], result[1] + ancestor.y * result[2], ancestor.scale * result[2])
-
     def contains(self, x, y):
-        adjust = self.adjust_for_parents(self.parent)
+        adjust = adjust_for_parents(self.parent)
         x = (x - adjust[0]) / adjust[2]
         y = (y - adjust[1]) / adjust[2]
         sx, sy = self.position
@@ -550,6 +551,10 @@ class PlayerBoardLayer(Layer):
                                    y + 0.076 * height,
                                    width * 0.725,
                                    height * 0.07)
+        self.rect_action_board = Rect(x + 0.49 * width,
+                                      y + 0.175 * height,
+                                      width * 0.355,
+                                      height * 0.125)
         self.rect_population_material = Rect(x + 0.105 * width,
                                              y + 0.17 * height,
                                              width * 0.38,
@@ -569,7 +574,7 @@ class PlayerBoardLayer(Layer):
         for child in self.get_children():
             if isinstance(child, Sprite) and not isinstance(child, BackgroundSprite):
                 child.kill()
-        # influence track        
+        # influence track
         n_influence = len(self.player.personal_board.influence_track.get_components())
         for n in range(n_influence):
             position = self.get_influence_coord(n)
@@ -578,6 +583,16 @@ class PlayerBoardLayer(Layer):
                                       color = self.color,
                                       scale = 0.9)
             self.add(influence_sprite, 2)
+        # action board
+        for action_index in range(6):
+            action = ActionBoard.action_names[action_index];
+            n_influence = len(self.player.personal_board.action_board.get_components(action))
+            for n in range(n_influence):
+                sprite = Sprite('influence white.png',
+                                color = self.color,
+                                position = self.get_action_coord(action_index, n),
+                                scale = 0.9)
+                self.add(sprite, z = n + 1)
             
         # population track(s)
         for track in self.player.personal_board.population_track.get_zones().itervalues():
@@ -604,6 +619,16 @@ class PlayerBoardLayer(Layer):
         x = rect.left + (n + 0.5) / 13 * rect.width
         y = rect.bottom + 0.5 * rect.height
         return (x, y)
+    
+    def get_action_coord(self, action_index, n):
+        """
+        Get the coordinates to place the influence disc sprite on the action board.
+        """
+        width = self.rect_action_board.width * 0.95
+        offset_x = (self.rect_action_board.width - width) * 0.7
+        x = int(offset_x + (action_index + 0.5) * width / 6.0)
+        y = self.rect_action_board.height * 0.35
+        return (self.rect_action_board.x + x + 6*n, self.rect_action_board.y + y + 7*n)
     
     def get_population_coord(self, n, resource_type):
         """
@@ -695,7 +720,16 @@ class ControlLayer(Layer):
         """
         self.scenes[key] = scene
         scene.add(self)
+
+class Hide(IntervalAction):
+    def __init__(self, duration):
+        self.duration = duration
         
+    def update(self, t):
+        if t >= 1.0:
+            self.target.visible = False
+    
+
 class HudLayer(Layer):
     is_event_handler = True
     def __init__(self, game):
@@ -710,6 +744,10 @@ class HudLayer(Layer):
 
         self.influence_layer = HudInfluenceTrackLayer(scale = 1.2 * self.scale_hud)
         self.add(self.influence_layer)
+        self.influence_disc = Sprite('influence white.png', scale = 0.96 * self.scale_hud)
+        self.influence_disc.visible = False
+        self.add(self.influence_disc)
+        self.influence_disc_component = None
         
         self.turn_button = Sprite('turn_button.png',
                                   anchor = (0, 0),
@@ -735,6 +773,7 @@ class HudLayer(Layer):
         self.fleet_manager_frame = AnchorSprite('fleet_manager.png', scale = 0.5 * self.scale_hud, anchor = (1.0, 1.0))
         self.fleet_manager_frame.position = director.get_window_size()
         self.add(self.fleet_manager_frame)
+
 
         self.sub_layer = Layer()
         self.fleet_manager_frame.add(self.sub_layer)
@@ -801,11 +840,47 @@ class HudLayer(Layer):
             self.end_turn()
             return EVENT_HANDLED
         elif self.influence_layer.click_current_disc(x, y, self.game.current_player):
-            print 'clicked current disc'
-        elif self.action_board.on_mouse_press(x, y, self.game.current_player):
-            print 'clicked action board'
+            self.start_drag_disc(x, y, self.game.current_player.personal_board.influence_track)
+            self.influence_layer.refresh(self.game.current_player, False)
             return EVENT_HANDLED
+
+    def start_drag_disc(self, x, y, zone):
+        self.influence_disc.color = color_convert(self.game.current_player.color)
+        self.influence_disc.visible = True
+        self.influence_disc.position = (x, y)
+        self.influence_disc_component = zone.take()
         
+    def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        if self.influence_disc_component is not None:
+            self.influence_disc.position = director.get_virtual_coordinates(x, y)
+            return EVENT_HANDLED
+    
+    def on_mouse_release(self, x, y, buttons, modifiers):
+        if self.influence_disc_component is not None:
+            x, y = director.get_virtual_coordinates(x, y)
+            action = self.action_board.get_action_from_coords(x, y)
+            if action is not None:
+                self.set_info('Select Action: ' + action)
+                self.game.current_player.personal_board.action_board.add(action, self.influence_disc_component)
+                self.influence_disc_component = None
+                self.influence_disc.visible = False
+                self.refresh_influence_track()
+                self.action_board.refresh(self.game.current_player)
+                return EVENT_HANDLED
+            self.return_influence_disc()
+
+    def return_influence_disc(self):
+        n_influence = len(self.game.current_player.personal_board.influence_track.get_components())
+        position = self.influence_layer.get_global_disc_position(n_influence)
+        self.game.current_player.personal_board.influence_track.add(self.influence_disc_component)
+        self.influence_disc.do(MoveTo(position, duration = 0.5) + Hide(duration = 0.01))
+        
+    def draw(self):
+        if self.influence_disc_component is not None and not self.influence_disc.visible:
+            self.influence_disc_component = None
+            self.refresh_influence_track()
+        super(HudLayer, self).draw()
+
     def end_turn(self):
         self.game.end_turn()
         self.refresh_current_player()
@@ -827,13 +902,6 @@ class ActionBoardLayer(Layer):
                                                scale = scale)
         self.add(self.action_board_blank, -1)
         self.action_sprites = {}
-        self.action_list = ('Explore',
-                            'Influence',
-                            'Research',
-                            'Upgrade',
-                            'Build',
-                            'Move'
-                            )
         self.action_position = [0.2, 1.12, 2.05, 3, 3.95, 4.9]
         self.selection_sprite = AnchorSprite('action_selection_halo.png',
                                              scale = scale,
@@ -854,20 +922,35 @@ class ActionBoardLayer(Layer):
                 self.add(sprite)
                 self.action_sprites[action] = sprite
             self.action_sprites[action].visible = True
+        for child in self.get_children():
+            if not isinstance(child, AnchorSprite):
+                child.kill()
+        for action_index in range(6):
+            action = ActionBoard.action_names[action_index]
+            n_influence = len(current_player.personal_board.action_board.get_components(action))
+            for n in range(n_influence):
+                sprite = Sprite('influence white.png',
+                                color = color_convert(current_player.color),
+                                position = self.disc_position(action_index, n),
+                                scale = 0.32)
+                self.add(sprite, z = n + 1)
 
-    def on_mouse_press(self, x, y, current_player):
+    def disc_position(self, action_index, n):
+        width = self.action_board_blank.width * 0.95
+        offset_x = (self.action_board_blank.width - width) / 2
+        x = int(offset_x + (action_index + 0.5) * width / 6 - self.action_board_blank.width)
+        y = self.action_board_blank.height * 0.45
+        return (x + 1.6*n, y + 2.9*n)
+
+    def get_action_from_coords(self, x, y):
         rect = self.action_board_blank.get_AABB()
         rect.right = self.position[0]
         if rect.contains(x, y):
             dx = rect.width / 6.0
-            for n in range(6):
-                if rect.left + dx * n < x < rect.left + dx * (n + 1):
-                    self.parent.set_info('Select Action: ' + self.action_list[n])
-                    self.add(self.selection_sprite, z = 2)
-                    self.selection_sprite.x = (self.action_position[n] + 0.5) * dx - rect.width
-                    self.selection_sprite.color = color_convert(current_player.color)
-                    return True
-        return False
+            n = int((x - rect.left) / dx)
+            return ActionBoard.action_names[n]
+        else:
+            return None
 
 class HudInfluenceTrackLayer(ClipLayer):
     def __init__(self, scale = 1.0):
@@ -891,13 +974,21 @@ class HudInfluenceTrackLayer(ClipLayer):
         offset_x = (self.size[0] - width) / 2
         return (offset_x + width * n / 12 - self.size[0], self.size[1] * 0.55)
 
-    def refresh(self, current_player):
+    def get_global_disc_position(self, n):
+        position = self.get_disc_position(n)
+        adjust = adjust_for_parents(self.influence_track_sprite)
+        x = position[0] * adjust[2] + adjust[0]
+        y = position[1] * adjust[2] + adjust[1]
+        return (int(x), int(y))
+
+    def refresh(self, current_player, move = True):
         n_influence = len(current_player.personal_board.influence_track.get_components())
         for count in range(13):
             self.influence_disc_sprite[count].color = color_convert(current_player.color)
             self.influence_disc_sprite[count].visible = (count < n_influence)
-        left = int(self.get_disc_position(24.8 - n_influence)[0]*self.influence_track_sprite.scale)
-        self.influence_track_sprite.do(MoveTo((left, 0), duration = 0.5))
+        if move:
+            left = int(self.get_disc_position(24.8 - n_influence)[0]*self.influence_track_sprite.scale)
+            self.influence_track_sprite.do(MoveTo((left, 0), duration = 0.5))
 
     def click_current_disc(self, x, y, current_player):
         n_influence = len(current_player.personal_board.influence_track.get_components())
@@ -994,7 +1085,7 @@ class ResearchBoardScene(Scene):
         # self.add(control_layer, 2)
         
 class MainScreen(object):
-    def __init__(self, game):  
+    def __init__(self, game):
         control_layer = ControlLayer(game)
         
         board_scene = BoardScene(game)
