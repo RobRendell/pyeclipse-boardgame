@@ -440,32 +440,8 @@ class GalaxyBoardLayer(ScrollableLayer):
                             self.hud_layer.update_fleet([child.obj])
                         
 
-        # explore the sector if right click and sector empty
-        # influence the sector if right click and not empty
-        if button == RIGHT:   
-            if sector is None:    
-                sector_tile = self.game.draw_hex(coord)
-                if sector_tile is not None:
-                    self.game.place_hex(sector_tile, coord)
-                    self.hud_layer.set_info('New Sector discovered: ' + sector_tile.name)
-                    self.display_sector(coord)
-                else:
-                    self.hud_layer.set_info('No New Sector to explore -Aborting')
-            elif len(sector.get_components(InfluenceDisc)) == 0:
-                self.game.move(self.game.current_player.personal_board.influence_track, sector)
-                self.set_hex_color(coord, self.game.current_player.color)
-                self.hud_layer.set_info('Influence on sector ' + sector.name)
-                self.hud_layer.refresh_influence_track()
-            else:
-                player = sector.get_components(InfluenceDisc)[0].owner
-                self.game.move(sector, player.personal_board.influence_track, component_type = InfluenceDisc)
-                self.set_hex_color(coord, 'grey')
-                self.hud_layer.set_info('Influence removed from Sector')
-                self.hud_layer.refresh_influence_track()
         elif sector is not None:
             self.hud_layer.set_info(str(sector))
-        else:
-            self.hud_layer.set_info('Unknown Sector')
             
         return EVENT_HANDLED
 

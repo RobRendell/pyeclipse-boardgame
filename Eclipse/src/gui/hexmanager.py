@@ -19,7 +19,6 @@ class HexManager(object):
         self.hex_height34 = self.hex_height * 3 / 4
         self.x_offset = center_rect_coord[0]
         self.y_offset = center_rect_coord[1]
-        self.sprite_slots = {} #relative hex coord -> sprite
         
     def get_hex_from_hex_coord(self, u, v):
         """get the hexagon coordinates containing the point (u,v)"""
@@ -47,7 +46,7 @@ class HexManager(object):
         return (u, v)
     
     def get_rect_coord_from_hex_coord(self, u, v):
-        x, y = self.get_rect_coord_from_hex_coord(u, v)
+        x, y = self.get_rel_rect_coord_from_hex_coord(u, v)
         x += self.x_offset
         y += self.y_offset
         return (x, y)
@@ -56,23 +55,6 @@ class HexManager(object):
         x = self.hex_width * u / 2
         y = self.hex_height34 * v
         return (x, y)
-    
-    def get_sprite_coord(self, u, v):
-        """ get the rect coordinate to place a sprite"""
-        slots = [(u + 0.3, v + 0.3),
-                 (u + 0.6, v),
-                 (u + 0.3, v - 0.3),
-                 (u - 0.3, v - 0.3),
-                 (u - 0.6, v),
-                 (u - 0.3, v + 0.3)
-                 ]
-        random.shuffle(slots)
-        for hex_coord in slots:
-            if hex_coord not in self.sprite_slots :
-                self.sprite_slots[hex_coord] = 'Occupied'
-                u, v = hex_coord
-                return self.get_rect_coord_from_hex_coord(u, v)
-        
     
 if __name__ == "__main__":
     hm = HexManager(20.0)
