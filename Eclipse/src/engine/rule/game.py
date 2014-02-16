@@ -144,25 +144,23 @@ class Game(object):
         else:
             zone_from.take(component_type = component_type, resource_type = resource_type)
         zone_to.add(component, resource_type = resource_type)
+
+    def get_coord_ring(self, coord):
+        abs_half_x = (abs(coord[0]) + 1)//2
+        abs_coord = (abs_half_x, abs(coord[1]))
+        ring = min(max(abs_coord), 3)
+        if (abs_coord == (2, 2)):
+            ring += 1
+        return ring
+            
+            
         
     def draw_hex(self, coord):
         """
         Method called when a player is exploring. Return a SectorTile object
         from the draw pile corresponding to the coordinates. Return None
         if the draw pile was empty."""
-        abs_coord = (abs(coord[0]),abs(coord[1]))
-        draw_pile_number = min(max(abs_coord), 3)
-        #with the coordinate system, there are some exceptions to the simple formula above
-        if (coord == (-1,1)
-            or coord == (1,-1)
-            or coord == (-2,1)
-            or coord == (-1,2)
-            or coord == (2,-1)
-            or coord == (1,-2)
-            or coord == (-2,2)
-            or coord == (2,-2)):
-            draw_pile_number += 1
-
+        draw_pile_number = self.get_coord_ring(coord)
 
         draw_pile = [self.inner_sectors_drawpile,
                      self.middle_sectors_drawpile,
@@ -174,11 +172,11 @@ class Game(object):
         """
         Place a SectorTile on the board.
         """
-        self.board.add(coord, sector_tile)   
+        return self.board.add(coord, sector_tile)   
         
-    def rotate_hex(self, coord):
+    def rotate_hex(self, coord, amount = 1):
         sector = self.board.get_components(coord, Sector)
-        sector.rotate()
+        sector.rotate(n = amount)
         
 class Phase(object):
     pass

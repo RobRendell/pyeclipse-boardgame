@@ -3,33 +3,37 @@ Created on 4 janv. 2012
 
 @author: jglouis
 '''
-from cocos.scene import Scene
-from cocos.layer.base_layers import Layer
-from cocos.text import Label
-from cocos.director import director
-from cocos.scenes.transitions import FadeUpTransition, ZoomTransition
-from cocos.layer.util_layers import ColorLayer
-from cocos.draw import Line
 import math
-from cocos.layer.scrolling import ScrollableLayer, ScrollingManager
-import pyglet
-from cocos.sprite import Sprite
-from hexmanager import HexManager
-from cocos.actions.base_actions import IntervalAction
 import random
-from engine.zone import Sector, ResourceSlot, ActionBoard
-from engine.component import InfluenceDisc, Ship, Interceptor, Cruiser, Dreadnought, Starbase, \
-    AncientShip, GalacticCenterDefenseSystem, DiscoveryTile, PopulationCube
-from pyglet.window.mouse import RIGHT
-from pyglet.event import EVENT_HANDLED
+
+from cocos.actions.base_actions import IntervalAction
+from cocos.actions.interval_actions import Rotate, MoveTo
+from cocos.director import director
+from cocos.draw import Line
+from cocos.layer.base_layers import Layer
+from cocos.layer.scrolling import ScrollableLayer, ScrollingManager
+from cocos.layer.util_layers import ColorLayer
+from cocos.menu import Menu, MenuItem, LEFT, BOTTOM, verticalMenuLayout
 from cocos.rect import Rect
-from pyglet.window.key import B, R, _1, P, MOD_CTRL
-from cocos.batch import BatchNode
-from cocos.actions.interval_actions import Rotate, MoveTo, FadeOut
-from cocos.menu import Menu, MenuItem, zoom_in, zoom_out, shake, ColorMenuItem, fixedPositionMenuLayout, LEFT, TOP, \
-    BOTTOM, verticalMenuLayout
+from cocos.scene import Scene
+from cocos.scenes.transitions import FadeUpTransition, ZoomTransition
+from cocos.sprite import Sprite
+from cocos.text import Label
+import pyglet
+from pyglet.event import EVENT_HANDLED
 from pyglet.gl.gl import glViewport, glMatrixMode, glLoadIdentity, GL_PROJECTION, \
     GL_MODELVIEW, glOrtho
+from pyglet.window.key import B, R, _1, P, MOD_CTRL
+from pyglet.window.mouse import RIGHT
+
+from engine.component import InfluenceDisc, Ship, Interceptor, Cruiser, \
+    Dreadnought, Starbase, AncientShip, GalacticCenterDefenseSystem, DiscoveryTile
+from engine.rule.action import actions, UIAction
+from engine.zone import Sector, ResourceSlot, ActionBoard
+from hexmanager import HexManager
+from gui.guiaction import ShowSceneGuiAction, SelectUnexploredHexGuiAction,\
+    SelectFromHexGuiAction, RotateRejectGuiAction,\
+    ShowCurrentPlayerBoardGuiAction
 
 pyglet.resource.path.append('./image')
 pyglet.resource.path.append('./image/boards')
@@ -192,12 +196,12 @@ class PopulationChoiceMenu(Menu):
     def on_quit(self):
         pyglet.app.exit()
         
-class BoardLayer(ScrollableLayer):
+class GalaxyBoardLayer(ScrollableLayer):
     is_event_handler = True
-    def __init__(self, scroller, hud_layer, game):
+    def __init__(self, scroller, main_screen, hud_layer, game):
         self.px_width = 6000
         self.px_height = 6000
-        super(BoardLayer, self).__init__()
+        super(GalaxyBoardLayer, self).__init__()
         self.add(Label('BoardLayer'))
         # self.add(Sprite(pyglet.resource.image('milkyway.jpg'), scale = 0.5, position = (self.px_width / 2, self.px_height / 2)), -1)
         # self.add(Sprite(pyglet.resource.animation('planet.gif'), scale = 0.5, position = (self.px_width / 2, self.px_height / 2)))
@@ -206,115 +210,102 @@ class BoardLayer(ScrollableLayer):
         self.scroller = scroller
         self.scroller.set_focus(self.px_width / 2, self.px_height / 2)
         self.scroller.scale = 0.5
+        self.main_screen = main_screen
         self.hud_layer = hud_layer
         self.game = game
-        self.hex_color_sprites = {}
-        self.hex_color_discs = {}
+        self.hex_layer = {}
+        self.hex_sprite_slots = {}
 
-        self.batch1 = BatchNode()
-        self.batch2 = BatchNode()
-        self.batch3 = BatchNode()
-        self.add(self.batch1, 1)
-        self.add(self.batch2, 2)
-        self.add(self.batch3, 3)
+        # wormholes
+        self.wormhole_positions = [self.hex_manager.get_rel_rect_coord_from_hex_coord(0.55, 0.55),
+                                  self.hex_manager.get_rel_rect_coord_from_hex_coord(1.1, 0),
+                                  self.hex_manager.get_rel_rect_coord_from_hex_coord(0.55, -0.55),
+                                  self.hex_manager.get_rel_rect_coord_from_hex_coord(-0.55, -0.55),
+                                  self.hex_manager.get_rel_rect_coord_from_hex_coord(-1.1, 0),
+                                  self.hex_manager.get_rel_rect_coord_from_hex_coord(-0.55 , 0.55)
+                                  ]
+        self.wormhole_rotations = [210, 270, 330, 30, 90, 150]
+
+        # sprites
+        self.sprite_slots = [self.hex_manager.get_rel_rect_coord_from_hex_coord(0.3, 0.3),
+                             self.hex_manager.get_rel_rect_coord_from_hex_coord(0.6, 0.0),
+                             self.hex_manager.get_rel_rect_coord_from_hex_coord(0.3, -0.3),
+                             self.hex_manager.get_rel_rect_coord_from_hex_coord(-0.3, -0.3),
+                             self.hex_manager.get_rel_rect_coord_from_hex_coord(-0.6, 0.0),
+                             self.hex_manager.get_rel_rect_coord_from_hex_coord(-0.3, 0.3)
+                             ]
         
         for coord in self.game.board.get_components().iterkeys():
             self.display_sector(coord)
-    
+
     def set_hex_color(self, coord, color_name):
+        if coord not in self.hex_layer:
+            layer = Layer()
+            rect_position = self.hex_manager.get_rect_coord_from_hex_coord(*coord)
+            layer.position = rect_position
+            self.hex_layer[coord] = layer
+            self.hex_sprite_slots[coord] = {}
+            self.add(layer)
+            hex_frame = Sprite('infhexa.png', scale = 0.85)
+            layer.add(hex_frame, name = 'frame')
+            disc = Sprite('influence white.png', scale = 0.3)
+            layer.add(disc, name = 'disc')
         color = color_convert(color_name)
-        if coord in self.hex_color_sprites:
-            self.hex_color_sprites[coord].color = color
-            if color_name == 'grey':
-                self.hex_color_discs[coord].visible = False
-            else:
-                self.hex_color_discs[coord].visible = True
-                self.hex_color_discs[coord].color = color
+        self.hex_layer[coord].get(name = 'frame').color = color
+        disc = self.hex_layer[coord].get(name = 'disc')
+        if color_name == 'grey':
+            disc.visible = False
         else:
-            u, v = coord
-            rect_position = self.hex_manager.get_rect_coord_from_hex_coord(u, v)
-            hexa = Sprite('infhexa.png',
-                scale = 0.85,
-                position = rect_position,
-                color = color)
-            
-            batch = BatchNode()
-            batch.anchor = rect_position
-            self.add(batch, name = str(coord))
-            batch.add(hexa)
-            self.hex_color_sprites[coord] = hexa
-            disc = Sprite('influence white.png',
-                          scale = 0.3,
-                          position = rect_position,
-                          color = color)
-            batch.add(disc)
-            if color_name == 'grey':
-                disc.visible = False
-            self.hex_color_discs[coord] = disc
-            
-    def rotate_hex(self, coord):
-        rotate = Rotate(60, 0.2)
-        try:
-            batch = self.get(name = str(coord))
-            if not batch.are_actions_running():
-                batch.do(rotate)
-                self.game.rotate_hex(coord)
-        except:
-            pass
-        
-    def display_sector(self, coord):                   
-        u, v = coord
+            disc.visible = True
+            disc.color = color
+
+    def is_hex_rotating(self, coord):
+        frame = self.hex_layer[coord].get(name = 'frame')
+        return frame.are_actions_running()
+
+    def rotate_hex(self, coord, amount = 1):
+        if coord in self.hex_layer:
+            frame = self.hex_layer[coord].get(name = 'frame')
+            if not frame.are_actions_running():
+                rotate = Rotate(60 * amount, 0.2 * amount)
+                frame.do(rotate)
+
+    def display_sector(self, coord):
         sector = self.game.board.get_components()[coord]
-        rect_position = self.hex_manager.get_rect_coord_from_hex_coord(u, v)
-        
-        # hex_color
         try:
-            color = sector.get_components(InfluenceDisc)[0].color
+            color_name = sector.get_components(InfluenceDisc)[0].color
         except:
-            color = 'grey'
-        self.set_hex_color(coord, color)
+            color_name = 'grey'
+        self.set_hex_color(coord, color_name)
+        hex_layer = self.hex_layer[coord]
 
         # wormholes
-        wormhole_positions = [(0.5, 0.5),
-                              (1.0, 0),
-                              (0.5, -0.5),
-                              (-0.5, -0.5),
-                              (-1.0, 0),
-                              (-0.5 , 0.5)
-                              ]
-        wormhole_rotations = [210, 270, 330, 30, 90, 150]
-        
-        for n, (pos, rot) in enumerate(zip(wormhole_positions, wormhole_rotations)):
-            is_wormhole = sector.wormholes[(n - sector.rotation) % 6]
+        for n, (pos, rot) in enumerate(zip(self.wormhole_positions, self.wormhole_rotations)):
+            is_wormhole = sector.wormholes[(n - sector.rotation) % 6] == 1
             if is_wormhole:
-                abs_rect_pos = self.hex_manager.get_rect_coord_from_hex_coord(u + pos[0], v + pos[1])
                 wormhole_sprite = Sprite('wormhole.png',
-                                         position = abs_rect_pos,
+                                         position = pos,
                                          scale = 0.05
                                          )
-                wormhole_sprite.image_anchor_y = 0
                 wormhole_sprite.rotation = rot
-                
-                self.get(str(coord)).add(wormhole_sprite)
-               
+                hex_layer.get(name = 'frame').add(wormhole_sprite, z = 1)
+
         # ships
         for ship in sector.get_components(Ship):
-
-                
             ship_picture = {Interceptor : 'interceptor.png',
                             Cruiser     : 'cruiser.png',
                             Dreadnought : 'dreadnought.png',
                             Starbase    : 'starbase.png'
                             }[ship.__class__]
                 
-            ship_coord = self.hex_manager.get_sprite_coord(u, v)
+            ship_coord = self.get_sprite_coord(coord)
             ship_sprite = SelectableSprite(ship,
-                                           ship_picture,
-                                           scale = 0.2,
-                                           position = ship_coord,
-                                           color = color_convert(ship.color)
+                                            ship_picture,
+                                            scale = 0.2,
+                                            position = ship_coord,
+                                            color = color_convert(ship.color)
                                            )
-            self.batch1.add(ship_sprite)
+            hex_layer.add(ship_sprite, z = 1)
             
         # planets
         all_slots = {None:[],
@@ -328,30 +319,29 @@ class BoardLayer(ScrollableLayer):
         for resource_type, slots in all_slots.iteritems():
             if len(slots) == 0:
                 continue
-            color = color_convert(resource_type)
-            position = self.hex_manager.get_sprite_coord(u, v)         
+            world_color = color_convert(resource_type)
+            position = self.get_sprite_coord(coord)         
             planet_sprite = Sprite('planet.png',
-                                   position = position,
-                                   scale = 0.05,
-                                   color = color
+                                    position = position,
+                                    scale = 0.05,
+                                    color = world_color
                                    )
-            self.batch1.add(planet_sprite)
+            hex_layer.add(planet_sprite, z = 1)
             x, y = position
-            for slot, position in zip(slots, [(x - 10, y), (x + 10, y)]):
+            for slot, slot_position in zip(slots, [(x - 10, y), (x + 10, y)]):
                 slot_picture = 'slot_wild_adv.png' if slot.advanced else 'slot_wild.png'
                 slot_sprite = SelectableSprite(slot,
                                                slot_picture,
-                                               position = position,
-                                               color = color,
+                                               position = slot_position,
+                                               color = world_color,
                                                scale = 0.2)
-                self.batch2.add(slot_sprite)
+                hex_layer.add(slot_sprite, z = 2)
                 if len(slot.get_components()) == 1:
                     population_sprite = Sprite('population white.png',
-                                               position = position,
-                                               color = color_convert(slot.get_components()[0].color),
-                                               scale = 0.2
-                                               )
-                    slot_sprite.add(population_sprite)
+                                               position = slot_position,
+                                               color = color_convert(color_name),
+                                               scale = 0.22)
+                    hex_layer.add(population_sprite, z = 3)
                 
         # vp
         vp = sector.victory_points
@@ -360,51 +350,55 @@ class BoardLayer(ScrollableLayer):
                       3 :'reputation3.png',
                       4 :'reputation4.png'}[vp]
         vp_sprite = Sprite(vp_picture,
-                           position = rect_position,
+                           position = (17, 17),
                            scale = 0.2)
-        vp_sprite.x += 17
-        vp_sprite.y += 17
-        self.batch1.add(vp_sprite)
+        hex_layer.add(vp_sprite, z = 1)
         
         # artifact
         if sector.artifact:
             artifact_sprite = Sprite('artifact.png',
-                                     position = rect_position,
+                                     position = (27, 27),
                                      scale = 0.5
                                      )
-            artifact_sprite.x += 27
-            artifact_sprite.y += 27
-            self.batch1.add(artifact_sprite)
+            hex_layer.add(artifact_sprite, z = 1)
         
         # discovery
         if len(sector.get_components(DiscoveryTile)):
             discovery_tile_sprite = Sprite('discovery_tile_back.png',
-                                           position = rect_position,
                                            scale = 0.3
                                            )
-            self.batch2.add(discovery_tile_sprite)
+            hex_layer.add(discovery_tile_sprite, name = 'discovery', z = 2)
         
         # ancients and gdc (npc)
         n_ancients = len(sector.get_components(AncientShip))
         for n in range(n_ancients):
             ancient_sprite = Sprite('ancient_ship.png',
-                                    position = rect_position,
+                                    position = (-10 * n, 10 * n),
                                     scale = 0.3
                                     )
-            ancient_sprite.x -= 20.0 * (n - (1.0 * n / n_ancients))
-            ancient_sprite.y += 20.0 * (n - (1.0 * n / n_ancients))
-            self.batch3.add(ancient_sprite)
+            hex_layer.add(ancient_sprite, z = 3)
         if len(sector.get_components(GalacticCenterDefenseSystem)):
             gdc_sprite = Sprite('gdc.png',
-                                position = rect_position,
                                 scale = 0.3
                                 )
-            self.batch3.add(gdc_sprite)
+            hex_layer.add(gdc_sprite, z = 3)
 
-    def on_mouse_press(self, screen_x, screen_y, button, modifiers):               
+    def get_sprite_coord(self, coord):
+        options = range(len(self.sprite_slots))
+        random.shuffle(options)
+        for index in options:
+            if index not in self.hex_sprite_slots[coord]:
+                self.hex_sprite_slots[coord][index] = True
+                return self.sprite_slots[index]
+
+    def on_mouse_press(self, screen_x, screen_y, button, modifiers):
         x, y = self.scroller.pixel_from_screen(screen_x, screen_y)
         hex_u, hex_v = self.hex_manager.get_hex_from_rect_coord(x, y)
         coord = (hex_u, hex_v)
+        
+        if self.main_screen.current_gui_action is not None:
+            if self.main_screen.current_gui_action.on_hex_mouse_click(coord, button, modifiers):
+                return EVENT_HANDLED
         
         sector = self.game.board.get_components(coord, Sector)
 
@@ -413,36 +407,37 @@ class BoardLayer(ScrollableLayer):
             return EVENT_HANDLED
         
         # Selectable sprite
-        for child in self.batch1.get_children() + self.batch2.get_children() + self.batch3.get_children():            
-            if isinstance(child, SelectableSprite):
-                if child.get_AABB().contains(x, y):
-                    if isinstance(child.obj, ResourceSlot) and button == RIGHT and len(sector.get_components(InfluenceDisc)):                        
-                        # if it is a wild resource slot, then ask the player which material it is
-                        if child.obj.resource_type is None:
-                            player = sector.get_components(InfluenceDisc)[0].owner
-                            popup = PopulationChoiceMenu(self.game, self, child, player)                                                        
-                            popup.position = self.get_ancestor(ScrollingManager).pixel_to_screen(x, y)                            
-                            popup_layer = self.get_ancestor(BoardScene).popup_layer                                                        
-                            popup_layer.add(popup)
+        if coord in self.hex_layer:
+            for child in self.hex_layer[coord].get_children():            
+                if isinstance(child, SelectableSprite):
+                    if child.get_AABB().contains(x, y):
+                        if isinstance(child.obj, ResourceSlot) and button == RIGHT and len(sector.get_components(InfluenceDisc)):                        
+                            # if it is a wild resource slot, then ask the player which material it is
+                            if child.obj.resource_type is None:
+                                player = sector.get_components(InfluenceDisc)[0].owner
+                                popup = PopulationChoiceMenu(self.game, self, child, player)                                                        
+                                popup.position = self.get_ancestor(ScrollingManager).pixel_to_screen(x, y)                            
+                                popup_layer = self.get_ancestor(BoardScene).popup_layer                                                        
+                                popup_layer.add(popup)
+                            
+                            elif len(child.obj.get_components()) == 1:  # remove population cube
+                                cube = child.obj.get_components()[0]
+                                self.game.move(child.obj, cube.owner.personal_board.population_track, resource_type = child.obj.resource_type)
+                                child.remove(child.get_children()[0])
+                            else:
+                                player = sector.get_components(InfluenceDisc)[0].owner
+                                self.game.move(player.personal_board.population_track, child.obj, resource_type = child.obj.resource_type)
+                                color = color_convert(player.color)
+                                population_sprite = Sprite('population white.png',
+                                                           position = child.position,
+                                                           color = color,
+                                                           scale = 0.2
+                                                           )
+                                child.add(population_sprite, 1)
+                            return EVENT_HANDLED
                         
-                        elif len(child.obj.get_components()) == 1:  # remove population cube
-                            cube = child.obj.get_components()[0]
-                            self.game.move(child.obj, cube.owner.personal_board.population_track, resource_type = child.obj.resource_type)
-                            child.remove(child.get_children()[0])
-                        else:
-                            player = sector.get_components(InfluenceDisc)[0].owner
-                            self.game.move(player.personal_board.population_track, child.obj, resource_type = child.obj.resource_type)
-                            color = color_convert(player.color)
-                            population_sprite = Sprite('population white.png',
-                                                       position = child.position,
-                                                       color = color,
-                                                       scale = 0.2
-                                                       )
-                            child.add(population_sprite, 1)
-                        return EVENT_HANDLED
-                    
-                    elif isinstance(child.obj, Ship):
-                        self.hud_layer.update_fleet([child.obj])
+                        elif isinstance(child.obj, Ship):
+                            self.hud_layer.update_fleet([child.obj])
                         
 
         # explore the sector if right click and sector empty
@@ -473,40 +468,49 @@ class BoardLayer(ScrollableLayer):
             self.hud_layer.set_info('Unknown Sector')
             
         return EVENT_HANDLED
-                
-    def on_mouse_motion(self, x, y, dx, dy):    
+
+    def get_hex_from_screen_coords(self, x, y):
         x, y = self.scroller.pixel_from_screen(x, y)
-        hex_u, hex_v = self.hex_manager.get_hex_from_rect_coord(x, y)
-        hex_x, hex_y = self.hex_manager.get_rect_coord_from_hex_coord(hex_u, hex_v)
-        for child in self.get_children():
-            if isinstance(child, Line):
-                child.kill()
-        self.add_hex((hex_x, hex_y), self.hex_width / 2)
+        return self.hex_manager.get_hex_from_rect_coord(x, y)
+
+    def on_mouse_motion(self, x, y, dx, dy):
+        if self.main_screen.current_gui_action is not None:
+            x, y = self.scroller.pixel_from_screen(x, y)
+            coords = self.hex_manager.get_hex_from_rect_coord(x, y)
+            self.main_screen.current_gui_action.on_hex_mouse_move(coords)
         
-    def add_hex(self, centre, r):        
+    def draw_hex_outline(self, coords, text = None, color = (255, 255, 255, 255), z = 2):        
+        centre = self.hex_manager.get_rect_coord_from_hex_coord(*coords)
         hex_coord = []
         hex_centre = centre
-        hex_r = r
+        hex_r = self.hex_width / 2
         hex_vert = hex_r / math.sqrt(3)
         hex_coord.append((hex_centre[0], hex_centre[1] + 2 * hex_vert))
         hex_coord.append((hex_centre[0] + hex_r, hex_centre[1] + hex_vert))
         hex_coord.append((hex_centre[0] + hex_r, hex_centre[1] - hex_vert))
         hex_coord.append((hex_centre[0], hex_centre[1] - 2 * hex_vert))
         hex_coord.append((hex_centre[0] - hex_r, hex_centre[1] - hex_vert))
-        hex_coord.append((hex_centre[0] - hex_r, hex_centre[1] + hex_vert))       
-        w = 3        
-        line1 = Line(hex_coord[0], hex_coord[1], (255, 255, 255, 255) , w)
-        line2 = Line(hex_coord[1], hex_coord[2], (255, 255, 255, 255) , w)
-        line3 = Line(hex_coord[2], hex_coord[3], (255, 255, 255, 255) , w)
-        line4 = Line(hex_coord[3], hex_coord[4], (255, 255, 255, 255) , w)
-        line5 = Line(hex_coord[4], hex_coord[5], (255, 255, 255, 255) , w)
-        line6 = Line(hex_coord[5], hex_coord[0], (255, 255, 255, 255) , w)
-        self.add(line1, 2)
-        self.add(line2, 2)
-        self.add(line3, 2)
-        self.add(line4, 2)
-        self.add(line5, 2)
-        self.add(line6, 2)   
+        hex_coord.append((hex_centre[0] - hex_r, hex_centre[1] + hex_vert))   
+        width = 3
+        line1 = Line(hex_coord[0], hex_coord[1], color, width)
+        line2 = Line(hex_coord[1], hex_coord[2], color, width)
+        line3 = Line(hex_coord[2], hex_coord[3], color, width)
+        line4 = Line(hex_coord[3], hex_coord[4], color, width)
+        line5 = Line(hex_coord[4], hex_coord[5], color, width)
+        line6 = Line(hex_coord[5], hex_coord[0], color, width)
+        self.add(line1, z)
+        self.add(line2, z)
+        self.add(line3, z)
+        self.add(line4, z)
+        self.add(line5, z)
+        self.add(line6, z)
+        result = [line1, line2, line3, line4, line5, line6]
+        if text is not None:
+            label = Label(text, font_name = 'Estrogen', position = hex_centre, font_size = 24,
+                          anchor_x='center', anchor_y='center')
+            self.add(label, z)
+            result.append(label)
+        return result
         
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
         self.scroller.scale += scroll_y * 0.1
@@ -523,7 +527,7 @@ class BoardLayer(ScrollableLayer):
         self.scroller.set_focus(x_focus, y_focus)
         
     def on_enter(self):
-        super(BoardLayer, self).on_enter()
+        super(GalaxyBoardLayer, self).on_enter()
         self.scroller = self.get_ancestor(ScrollingManager)
         
 class PlayerBoardLayer(Layer):
@@ -685,42 +689,6 @@ class ResearchBoardLayer(Layer):
                                                  scale = 1.5)
         self.add(research_board_sprite)
         
-class ControlLayer(Layer):
-    """
-    The control layer is unique. It handles the switching
-    between the different scenes.
-    """
-    is_event_handler = True    
-    def __init__(self, game):
-        super(ControlLayer, self).__init__()
-        self.game = game
-        self.scenes = {}
-        
-    def on_key_press(self, key, modifiers):
-        try:
-            if key == P:
-                current_player = self.game.current_player
-                scene = [scene for scene in self.scenes.itervalues()
-                         if isinstance(scene, PlayerBoardScene)
-                         and scene.player == current_player
-                         ][0]
-                director.replace(FadeUpTransition(scene, duration = 0.3))
-            elif key in self.scenes:
-                director.replace(FadeUpTransition(self.scenes[key], duration = 0.3))
-        except:
-            pass
-            
-    def add_scene(self, scene, key):
-        """
-        Add a new scene to the control layer that may be displayed by pressing
-        the corresponding key button.
-        the key must be an integer corresponding to a pyglet key from
-        pyglet.window.key.
-        This method also add the control layer to the scene as a child.
-        """
-        self.scenes[key] = scene
-        scene.add(self)
-
 class Hide(IntervalAction):
     def __init__(self, duration):
         self.duration = duration
@@ -732,9 +700,11 @@ class Hide(IntervalAction):
 
 class HudLayer(Layer):
     is_event_handler = True
-    def __init__(self, game):
+    def __init__(self, game, main_screen):
         super(HudLayer, self).__init__()
         self.game = game
+        self.main_screen = main_screen
+        self.current_player = None
         
         # hud scale
         self.scale_hud = min(director.get_window_size()[0] / 1920.0, director.get_window_size()[1] / 1080.0)
@@ -778,7 +748,8 @@ class HudLayer(Layer):
         self.sub_layer = Layer()
         self.fleet_manager_frame.add(self.sub_layer)
         
-        self.refresh_current_player()
+        # kick off first turn
+        self.main_screen.set_state('action phase')
         
     def do_resize(self, virtual_offset_x, virtual_offset_y):
         rhs, top = director.get_window_size()
@@ -830,22 +801,32 @@ class HudLayer(Layer):
     def update_time(self, dt):
         new_color = [0, random.randint(230, 255), 0, 255]       
         self.info.element.color = new_color
+        if self.current_player is not self.game.current_player:
+            self.refresh_current_player()
         
     def set_info(self, text):
         self.info.do(InfoAction(text, '_', 0.4))
+        
+    def get_influence_disc_drop_target(self):
+        if self.main_screen.player_action is None:
+            return 'actionBoard'
+        else:
+            return self.main_screen.current_gui_action.get_influence_disc_drop_target()
 
     def on_mouse_press(self, x, y, button, modifiers): 
         x, y = director.get_virtual_coordinates(x, y)
         if self.turn_button.contains(x, y):
             self.end_turn()
             return EVENT_HANDLED
-        elif self.influence_layer.click_current_disc(x, y, self.game.current_player):
-            self.start_drag_disc(x, y, self.game.current_player.personal_board.influence_track)
-            self.influence_layer.refresh(self.game.current_player, False)
-            return EVENT_HANDLED
+        elif self.influence_layer.click_current_disc(x, y, self.current_player):
+            target = self.get_influence_disc_drop_target()
+            if target is not None:
+                self.start_drag_disc(x, y, self.current_player.personal_board.influence_track)
+                self.influence_layer.refresh(self.current_player, False)
+                return EVENT_HANDLED
 
     def start_drag_disc(self, x, y, zone):
-        self.influence_disc.color = color_convert(self.game.current_player.color)
+        self.influence_disc.color = color_convert(self.current_player.color)
         self.influence_disc.visible = True
         self.influence_disc.position = (x, y)
         self.influence_disc_component = zone.take()
@@ -857,22 +838,38 @@ class HudLayer(Layer):
     
     def on_mouse_release(self, x, y, buttons, modifiers):
         if self.influence_disc_component is not None:
-            x, y = director.get_virtual_coordinates(x, y)
-            action = self.action_board.get_action_from_coords(x, y)
-            if action is not None:
-                self.set_info('Select Action: ' + action)
-                self.game.current_player.personal_board.action_board.add(action, self.influence_disc_component)
-                self.influence_disc_component = None
-                self.influence_disc.visible = False
-                self.refresh_influence_track()
-                self.action_board.refresh(self.game.current_player)
-                return EVENT_HANDLED
+            target = self.get_influence_disc_drop_target()
+            if target == 'actionBoard':
+                x, y = director.get_virtual_coordinates(x, y)
+                action = self.action_board.get_action_from_coords(x, y)
+                if action is not None:
+                    self.set_info('Select Action: ' + action)
+                    player_action = self.current_player.faction.actions[ActionBoard.action_names.index(action)]
+                    self.main_screen.set_player_action(player_action)
+                    self.current_player.personal_board.action_board.add(action, self.influence_disc_component)
+                    self.influence_disc_component = None
+                    self.influence_disc.visible = False
+                    self.refresh_influence_track()
+                    self.action_board.refresh(self.current_player)
+                    return EVENT_HANDLED
+            elif isinstance(target, tuple):
+                # Target is a hex coordinate
+                disc_coord = self.main_screen.board_scene.board_layer.get_hex_from_screen_coords(x, y)
+                if disc_coord == target:
+                    sector = self.game.board.get_components(target, Sector)
+                    if len(sector.get_components(InfluenceDisc)) == 0:
+                        sector.add(self.influence_disc_component)
+                        self.influence_disc_component = None
+                        self.influence_disc.visible = False
+                        self.main_screen.board_scene.board_layer.set_hex_color(target, self.game.current_player.color)
+                        self.refresh_influence_track()
+                        return EVENT_HANDLED
             self.return_influence_disc()
 
     def return_influence_disc(self):
-        n_influence = len(self.game.current_player.personal_board.influence_track.get_components())
+        n_influence = len(self.current_player.personal_board.influence_track.get_components())
         position = self.influence_layer.get_global_disc_position(n_influence)
-        self.game.current_player.personal_board.influence_track.add(self.influence_disc_component)
+        self.current_player.personal_board.influence_track.add(self.influence_disc_component)
         self.influence_disc.do(MoveTo(position, duration = 0.5) + Hide(duration = 0.01))
         
     def draw(self):
@@ -882,16 +879,17 @@ class HudLayer(Layer):
         super(HudLayer, self).draw()
 
     def end_turn(self):
-        self.game.end_turn()
+        self.main_screen.next_player_action_phase()
         self.refresh_current_player()
         
     def refresh_current_player(self):
-        self.turn_button.color = color_convert(self.game.current_player.color)
-        self.action_board.refresh(self.game.current_player)
+        self.current_player = self.game.current_player
+        self.turn_button.color = color_convert(self.current_player.color)
+        self.action_board.refresh(self.current_player)
         self.refresh_influence_track()
             
     def refresh_influence_track(self):
-        self.influence_layer.refresh(self.game.current_player)
+        self.influence_layer.refresh(self.current_player)
 
 class ActionBoardLayer(Layer):
     def __init__(self, position = (0, 0), scale = 1.0):
@@ -916,7 +914,7 @@ class ActionBoardLayer(Layer):
         for action in self.action_sprites:
             self.action_sprites[action].visible = False
         for action in current_player.faction.actions:
-            if not self.action_sprites.has_key(action):
+            if action not in self.action_sprites:
                 image = 'image/boards/action_' + action + '.png'
                 sprite = AnchorSprite(image, anchor = (1.0, 0), scale = self.action_board_blank.scale)
                 self.add(sprite)
@@ -1032,16 +1030,16 @@ class PopUpLayer(Layer):
             return EVENT_HANDLED            
   
 class BoardScene(Scene):
-    def __init__(self, game):
+    def __init__(self, game, main_screen):
         super(BoardScene, self).__init__()
+        self.game = game
         self.add(ColorLayer(0, 0, 0, 255), 0)
         scroller = ScrollingManager()
-        self.hud_layer = HudLayer(game)
+        self.hud_layer = HudLayer(game, main_screen)
         self.popup_layer = PopUpLayer(game)
-        self.board_layer = BoardLayer(scroller, self.hud_layer, game)
+        self.board_layer = GalaxyBoardLayer(scroller, main_screen, self.hud_layer, game)
         scroller.add(self.board_layer)
         self.add(scroller, 1)
-        # self.add(control_layer, 2)
         self.add(self.hud_layer, 4)
         self.add(self.popup_layer, 5)
         director.push_handlers(self)
@@ -1068,38 +1066,128 @@ class BoardScene(Scene):
     def on_enter(self):
         super(BoardScene, self).on_enter()
         self.on_resize(director._usable_width + 2 * director._offset_x, director._usable_height + 2 * director._offset_y)
-        
+
+    def highlight_hexes(self, hexes):
+        sprites = []
+        for coord in hexes:
+            text = None
+            if self.game.board.get_components(coord = coord) is None:
+                ring = self.game.get_coord_ring(coord)
+                text = 'I' * ring
+            lines = self.board_layer.draw_hex_outline(coord, color = (180, 180, 180, 255), text = text)
+            sprites.extend(lines)
+        return sprites
+            
+
 class PlayerBoardScene(Scene):
     def __init__(self, player):
         super(PlayerBoardScene, self).__init__()
         self.add(ColorLayer(200, 200, 200, 255), 0)
         self.add(PlayerBoardLayer(player), 1)
         self.player = player
-        # self.add(control_layer, 2)
         
 class ResearchBoardScene(Scene):
     def __init__(self):
         super(ResearchBoardScene, self).__init__()
         self.add(ColorLayer(100, 100, 100, 255), 0)
         self.add(ResearchBoardLayer(), 1)
-        # self.add(control_layer, 2)
         
-class MainScreen(object):
+class MainScreen(Layer):
+    is_event_handler = True    
     def __init__(self, game):
-        control_layer = ControlLayer(game)
-        
-        board_scene = BoardScene(game)
-        control_layer.add_scene(board_scene, B)
-        
+        super(MainScreen, self).__init__()
+        self.game = game
+        self.scenes = {}
+        self.board_scene = BoardScene(game, self)
+        self.add_scene(self.board_scene, B)
         for n, player in enumerate(game.players):
             scene = PlayerBoardScene(player)
-            control_layer.add_scene(scene, _1 + n)
-            
-        research_board_scene = ResearchBoardScene()
-        control_layer.add_scene(research_board_scene, R)
+            self.add_scene(scene, _1 + n)
+        self.research_board_scene = ResearchBoardScene()
+        self.add_scene(self.research_board_scene, R)
+        director.replace(ZoomTransition(self.board_scene, 1.0))
+        self.schedule_interval(self.update_time, .1)
+        self.initialise_gui_actions()
+
+    def on_key_press(self, key, modifiers):
+        if key == P:
+            self.show_current_player_board()
+        elif key in self.scenes:
+            self.transition(self.scenes[key])
+
+    def transition(self, scene):
+        if scene != director.scene:
+            director.replace(FadeUpTransition(scene, duration = 0.3))
+
+    def show_current_player_board(self):
+        current_player = self.game.current_player
+        scene = [scene for scene in self.scenes.itervalues()
+                 if isinstance(scene, PlayerBoardScene)
+                 and scene.player == current_player
+                 ][0]
+        self.transition(scene)
+
+    def add_scene(self, scene, key):
+        """
+        Add a new scene to the control layer that may be displayed by pressing
+        the corresponding key button.
+        the key must be an integer corresponding to a pyglet key from
+        pyglet.window.key.
+        This method also add the control layer to the scene as a child.
+        """
+        self.scenes[key] = scene
+        scene.add(self)
+
+    def initialise_gui_actions(self):
+        self.gui_action = {}
+        self.gui_action[UIAction.show_hex_map] = ShowSceneGuiAction(self.game, self, self.scenes[B])
+        self.gui_action[UIAction.select_unexplored_hex] = SelectUnexploredHexGuiAction(self.game, self)
+        self.gui_action[UIAction.select_from_hex] = SelectFromHexGuiAction(self.game, self)
+        self.gui_action[UIAction.rotate_reject_hex] = RotateRejectGuiAction(self.game, self)
+
+        self.gui_action[UIAction.show_research_board] = ShowSceneGuiAction(self.game, self, self.scenes[R])
+        self.gui_action[UIAction.show_blueprints] = ShowCurrentPlayerBoardGuiAction(self.game, self)
+
+    def set_state(self, state):
+        if state == 'action phase':
+            self.action_ui_count = 0
+            self.action_state = {}
+            self.player_action = None
+            self.current_gui_action = None
+
+    def next_player_action_phase(self):
+        if self.player_action is None:
+            # TODO if they've selected an action but they haven't used it yet, then they've also passed (and return the disc)
+            print 'player has passed'
+            # TODO see if they're now 1st player or if the action phase is done
+            # TODO these checks should be done in the game code - pass parameter to end_turn indicating if they're done anything?
+        self.game.end_turn()
+        self.action_ui_count = 0
+        self.action_state = {}
+        self.player_action = None
+        self.current_gui_action = None
         
-        director.replace(ZoomTransition(board_scene, 1.0))
-        
+    def set_player_action(self, player_action):
+        self.player_action = actions[player_action]
+        self.advance_player_action_count()
+    
+    def advance_player_action_count(self):
+        if self.current_gui_action is not None:
+            self.current_gui_action.on_end()
+        self.action_ui_count += 1
+        ui_action = self.player_action.next(self.action_ui_count, self.action_state, self.game)
+        if ui_action is None:
+            self.current_gui_action = None
+        else:
+            self.current_gui_action = self.gui_action[ui_action]
+            self.current_gui_action.on_start()
+
+    def update_time(self, dt):
+        if self.current_gui_action is not None:
+            if self.current_gui_action.is_finished():
+                self.advance_player_action_count()
+
+
 class InfoAction(IntervalAction):
     """Action that can be applied to any Label to make a dynamic text display
     """

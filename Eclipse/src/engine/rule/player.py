@@ -22,3 +22,12 @@ class Player(object):
             self.to_do.remove(action_klass)
         except:
             self.may_do.remove(action_klass)
+
+    def can_generate_wormholes(self):
+        return self.personal_board.technology_track.contains('Wormhole Generator')
+    
+    def get_extra_build_count(self):
+        if self.personal_board.technology_track.contains('Nanorobots'):
+            return 1
+        else:
+            return 0

@@ -47,15 +47,14 @@ class HexManager(object):
         return (u, v)
     
     def get_rect_coord_from_hex_coord(self, u, v):
-        x = self.hex_width * u / 2
-        y = self.hex_height34 * v
+        x, y = self.get_rect_coord_from_hex_coord(u, v)
         x += self.x_offset
         y += self.y_offset
         return (x, y)
     
     def get_rel_rect_coord_from_hex_coord(self, u, v):
-        x = self.hex_width * u - self.hex_width / 2.0 * v
-        y = 3.0 * self.hex_height / 4.0 * v
+        x = self.hex_width * u / 2
+        y = self.hex_height34 * v
         return (x, y)
     
     def get_sprite_coord(self, u, v):

@@ -34,7 +34,7 @@ def create_faction_json(json):
         json["starting_reputation"],
         json["starting_influence"],
         json["blueprints"],
-        json["special"] if json.has_key("special") else None
+        json["special"] if "special" in json else None
     )
 
 for faction_file in os.listdir('data/factions/'):

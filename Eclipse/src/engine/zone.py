@@ -2,6 +2,7 @@ import random
 import component as cp
 from material import shipparts
 from sets import Set
+from engine.component import InfluenceDisc, Ship, DiscoveryTile
 
 __author__="jglouis"
 __date__ ="$Dec 21, 2011 10:49:19 AM$"
@@ -35,6 +36,8 @@ class Zone(object):
         return component
 
 class Board(Zone):
+    neighbours = ( (1, 1), (2, 0), (1, -1), (-1, -1), (-2, 0), (-1, 1) )
+
     def __init__(self, game):
         #super(Board, self).__init__()
         self.hex_grid = {} #a dictionary coord->Sector
@@ -73,6 +76,8 @@ class Board(Zone):
             sector.rotate(rotation)
         else:
             self.hex_grid[coord].add(component)
+            sector = component
+        return sector
 
     def get_components(self, coord = None, comp_type = None):
         """
@@ -91,7 +96,75 @@ class Board(Zone):
         if comp_type is not None:
             return self.hex_grid[coord].get_components(comp_type)
         return [self.hex_grid[coord]] + self.hex_grid[coord].get_components()
+
+    def get_coords_owned_by(self, player):
+        result = []
+        for coord in self.hex_grid:
+            sector = self.hex_grid[coord]
+            influence = sector.get_components(component_type = InfluenceDisc)
+            if len(influence) > 0 and influence[0].owner == player:
+                result.append(coord)
+        return result
     
+    def get_coords_with_ships_of(self, player):
+        result = []
+        for coord in self.hex_grid:
+            sector = self.hex_grid[coord]
+            ships = [ ship for ship in sector.get_components(component_type = Ship) if ship.owner == player ]
+            if len(ships) > 0:
+                result.append(coord)
+        return result
+    
+    def get_exploration_options_for(self, player):
+        result = Set()
+        owned = self.get_coords_owned_by(player)
+        ships = self.get_coords_with_ships_of(player)
+        for coord in owned + ships:
+            from_hex = self.hex_grid[coord]
+            for wormhole_index in xrange(len(self.neighbours)):
+                connected = (player.can_generate_wormholes() or
+                             from_hex.wormholes[(wormhole_index - from_hex.rotation) % 6] == 1)
+                if connected:
+                    delta = self.neighbours[wormhole_index]
+                    to_hex = (coord[0] + delta[0], coord[1] + delta[1])
+                    if to_hex not in self.hex_grid:
+                        result.add(to_hex)
+        return result
+
+    def get_explore_source_hex(self, player, coords):
+        """
+        Find all possible hexes the given player could explore the nominated coordinates from
+        """
+        result = []
+        for neighbour_index in xrange(len(self.neighbours)):
+            delta = self.neighbours[neighbour_index]
+            from_hex_coords = (coords[0] + delta[0], coords[1] + delta[1])
+            if from_hex_coords in self.hex_grid:
+                from_hex = self.hex_grid[from_hex_coords]
+                player_influence = [ disc for disc in from_hex.get_components(component_type = InfluenceDisc) if disc.owner == player ]
+                player_ships = [ ship for ship in from_hex.get_components(component_type = Ship) if ship.owner == player ]
+                connected = (player.can_generate_wormholes() or
+                             from_hex.wormholes[(neighbour_index - from_hex.rotation + 3) % 6] == 1)
+                if connected and len(player_influence) + len(player_ships) > 0:
+                    result.append(from_hex_coords)
+        return result
+
+    def get_direction(self, from_hex_coords, to_hex_coords):
+        for neighbour_index in xrange(len(self.neighbours)):
+            delta = self.neighbours[neighbour_index]
+            if from_hex_coords[0] + delta[0] == to_hex_coords[0] and from_hex_coords[1] + delta[1] == to_hex_coords[1]:
+                return neighbour_index
+        return None
+
+    def has_wormhole_connection(self, from_hex_coords, to_hex_coords, player = None):
+        direction = self.get_direction(from_hex_coords, to_hex_coords)
+        from_hex = self.hex_grid[from_hex_coords]
+        to_hex = self.hex_grid[to_hex_coords]
+        from_wormhole = from_hex.wormholes[(direction - from_hex.rotation) % 6]
+        to_wormhole = to_hex.wormholes[(direction - to_hex.rotation + 3) % 6]
+        generator = 1 if player is not None and player.can_generate_wormholes() else 0
+        return from_wormhole + to_wormhole + generator >= 2
+
 class PlayerBoard(Zone):
     def __init__(self, owner):
         self.owner = owner
@@ -145,6 +218,13 @@ class Sector(Zone):
         """Rotate the sector n * 60 degrees clockwise. Default is 60."""
         self.rotation += n
         self.rotation %= 6
+
+    def add(self, component, **kwargs):
+        super(Sector, self).add(component, **kwargs)
+        if isinstance(component, InfluenceDisc):
+            if self.get_components(component_type = DiscoveryTile):
+                discovery = self.take(component_type = DiscoveryTile)
+                print "TODO pick up discovery tile", discovery.__dict__
 
 class DrawPile(Zone):
     def __init__(self, components):
@@ -214,7 +294,7 @@ class BlueprintBoard(Zone):
                 self.base_stats[unit][stat] = owner.faction.blueprints[unit][stat]
                 if stat != 'default':
                     self.stats.add(stat)
-            if self.base_stats[unit].has_key('default'):
+            if 'default' in self.base_stats[unit]:
                 self.ship_blueprints[unit] = [None for dummy in range(len(self.base_stats[unit]['default']))]
 
             
@@ -222,7 +302,7 @@ class BlueprintBoard(Zone):
         """Calculate the blueprint statistics for one particular ship type."""
         result = {}
         for stat in self.stats:
-            result[stat] = self.base_stats[ship_name][stat] if self.base_stats[ship_name].has_key(stat) else 0
+            result[stat] = self.base_stats[ship_name][stat] if stat in self.base_stats[ship_name] else 0
         ship_parts = self.get_ship_parts(ship_name)
         for sp in ship_parts:
             result['initiative'] += sp.initiative
