@@ -489,8 +489,14 @@ class GalaxyBoardLayer(ScrollableLayer):
         return result
         
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
-        self.scroller.scale += scroll_y * 0.1
-        self.scroller.scale = min(max(self.scroller.scale, 0.2), 2)
+        sx, sy = self.scroller.pixel_from_screen(x, y)
+        fx, fy = self.scroller.fx, self.scroller.fy
+        new_scale = min(max(self.scroller.scale + scroll_y * 0.1, 0.2), 2)
+        scale_change = self.scroller.scale / new_scale
+        self.scroller.scale = new_scale
+        dx = (fx - sx) * scale_change
+        dy = (fy - sy) * scale_change
+        self.scroller.set_focus(sx + dx, sy + dy)
         
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         fx, fy = self.scroller.fx, self.scroller.fy
