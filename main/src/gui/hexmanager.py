@@ -3,7 +3,6 @@ Created on 9 janv. 2012
 
 @author: jglouis
 '''
-import random
 import math
 
 class HexManager(object):
