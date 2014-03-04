@@ -4,22 +4,25 @@ Created on 4 janv. 2012
 @author: jglouis
 '''
 
+import os
+
 from cocos.director import director
 from cocos.layer.base_layers import MultiplexLayer, Layer
 from cocos.menu import MenuItem, ToggleMenuItem, Menu
 from cocos.scene import Scene
+from cocos.sprite import Sprite
 from cocos.text import Label
 import pyglet
 
 from engine.rule.game import Game
 from gui.play import MainScreen
-from cocos.sprite import Sprite
 
 
 #from cocos.particle import ParticleSystem, Color
 #from cocos.euclid import Point2
 
-pyglet.resource.path.append('../image')
+root_dir = os.getcwd()
+pyglet.resource.path.append(os.path.join(root_dir, 'image'))
 pyglet.resource.reindex()
 
 class MainMenuScene(Scene):

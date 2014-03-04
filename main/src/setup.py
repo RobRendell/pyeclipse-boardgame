@@ -3,7 +3,7 @@ Created on 11 janv. 2012
 
 @author: jglouis
 '''
-#The game was succesfully build under win7 and Ubuntu. for Ubuntu, it may be required to update
+#The game was successfully build under win7 and Ubuntu. for Ubuntu, it may be required to update
 #the cx freeze version to the newest one (tested with the 4.1.3)
 
 from cx_Freeze import setup, Executable

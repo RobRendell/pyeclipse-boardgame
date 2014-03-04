@@ -34,17 +34,19 @@ from hexmanager import HexManager
 from gui.guiaction import ShowSceneGuiAction, SelectUnexploredHexGuiAction,\
     SelectFromHexGuiAction, RotateRejectGuiAction,\
     ShowCurrentPlayerBoardGuiAction
+import os
 
-pyglet.resource.path.append('./image')
-pyglet.resource.path.append('./image/boards')
-pyglet.resource.path.append('./image/diplomats')
-pyglet.resource.path.append('./image/discovery_tiles')
-pyglet.resource.path.append('./image/upgrade_tiles')
-pyglet.resource.path.append('./image/research_tiles')
-pyglet.resource.path.append('./image/npc')
-pyglet.resource.path.append('./image/ships')
-pyglet.resource.path.append('./font')
-pyglet.resource.path.append('./ship_stats')
+root_dir = os.getcwd()
+pyglet.resource.path.append(os.path.join(root_dir, 'image'))
+pyglet.resource.path.append(os.path.join(root_dir, 'image/boards'))
+pyglet.resource.path.append(os.path.join(root_dir, 'image/diplomats'))
+pyglet.resource.path.append(os.path.join(root_dir, 'image/discovery_tiles'))
+pyglet.resource.path.append(os.path.join(root_dir, 'image/upgrade_tiles'))
+pyglet.resource.path.append(os.path.join(root_dir, 'image/research_tiles'))
+pyglet.resource.path.append(os.path.join(root_dir, 'image/npc'))
+pyglet.resource.path.append(os.path.join(root_dir, 'image/ships'))
+pyglet.resource.path.append(os.path.join(root_dir, 'font'))
+pyglet.resource.path.append(os.path.join(root_dir, 'ship_stats'))
 pyglet.resource.reindex()
 
 pyglet.font.add_directory('font')
@@ -63,7 +65,7 @@ def color_convert(text):
             None        :(255, 255, 255)
             }[text]
 
-def decorator(f):
+def resourceSlot(f):
     def new_f(self):
         if len(self.resource_slot_sprite.obj.get_components()) == 1:  # remove population cube                
             cube = self.resource_slot_sprite.obj.get_components()[0]
@@ -73,10 +75,9 @@ def decorator(f):
             self.game.move(self.player.personal_board.population_track, self.resource_slot_sprite.obj, resource_type = f(self))
             color = color_convert(self.player.color)
             population_sprite = Sprite('population white.png',
-                                                           position = self.resource_slot_sprite.position,
-                                                           color = color,
-                                                           scale = 0.2
-                                                           )
+                                       position = (2, 2),
+                                       color = color,
+                                       scale = 0.9)
             self.resource_slot_sprite.add(population_sprite, 1)       
         self.kill()      
     return new_f
@@ -162,6 +163,78 @@ class ClipLayer(Layer):
         super(ClipLayer, self).visit()
         pyglet.gl.glDisable(pyglet.gl.GL_SCISSOR_TEST)
 
+class FlowLayoutLayer(Layer):
+    def __init__(self, left = 0, right = 100, top = 0, image_margin = 0, text_color = (0, 205, 0, 200)):
+        super(FlowLayoutLayer, self).__init__()
+        self.left_margin = left
+        self.right_margin = right
+        self.top_margin = top
+        self.image_margin = image_margin
+        self.text_color = text_color
+        self.clear()
+        
+    def clear(self):
+        for child in self.get_children():
+            child.kill()
+        self.left_box = []
+        self.cursor = [self.left_margin, -self.top_margin]
+    
+    def add_space(self, width):
+        self.add_box(width, 0)
+
+    def add_space_to(self, position):
+        if self.cursor[0] > position:
+            self.new_line()
+        self.add_box(position - self.cursor[0], 0)
+
+    def add_image(self, image, **kwargs):
+        sprite = AnchorSprite(image, anchor = (0.,1.), **kwargs)
+        sprite.position = self.add_box(sprite.width, sprite.height)
+        self.add(sprite)
+
+    def add_box(self, width, height):
+        if width > self.right_margin - self.left_margin:
+            raise ValueError("Added box too wide to fit")
+        while self.right_margin - self.cursor[0] < width:
+            self.new_line()
+        result = (self.cursor[0], self.cursor[1])
+        self.cursor[0] += width
+        while len(self.left_box) > 0 and self.cursor[1] - height <= self.left_box[-1][1]:
+            self.left_box.pop()
+        self.left_box.append((self.cursor[0], self.cursor[1] - height))
+        return result
+
+    def new_line(self, clear = False, vspace = 0):
+        while len(self.left_box) > 0:
+            self.cursor[1] = self.left_box[-1][1]
+            self.left_box.pop()
+            if not clear:
+                break
+        self.cursor[1] -= vspace
+        while len(self.left_box) > 0 and self.cursor[1] <= self.left_box[-1][1]:
+            self.left_box.pop()
+        self.cursor[0] = self.left_box[-1][0] if len(self.left_box) > 0 else self.left_margin
+        
+    def add_text(self, text, font_name = 'Estrogen', font_size = 60, info_action = True, **kwargs):
+        width = self.right_margin - self.cursor[0]
+        if width < font_size * 3:
+            self.new_line()
+            width = self.right_margin - self.cursor[0]
+        label = Label(text,
+                      position = (self.cursor[0], self.cursor[1]),
+                      font_name = font_name,
+                      font_size = font_size,
+                      width = width,
+                      anchor_y = 'top',
+                      multiline = True,
+                      color = self.text_color,
+                      **kwargs)
+        self.add_box(width, label.element.content_height)
+        if info_action:
+            label.do(InfoAction(text, '', 0.4))
+            label.element.text = ''
+        self.add(label)
+
 class PopulationChoiceMenu(Menu):
     def __init__(self, game, board_layer, resource_slot_sprite, player):
         super(PopulationChoiceMenu, self).__init__()
@@ -181,15 +254,15 @@ class PopulationChoiceMenu(Menu):
         
         self.create_menu(items, layout_strategy = verticalMenuLayout)
         
-    @decorator
+    @resourceSlot
     def on_money(self):        
         return 'money'
     
-    @decorator   
+    @resourceSlot   
     def on_material(self):
         return 'material'
     
-    @decorator
+    @resourceSlot
     def on_science(self):
         return 'science'
         
@@ -338,10 +411,10 @@ class GalaxyBoardLayer(ScrollableLayer):
                 hex_layer.add(slot_sprite, z = 2)
                 if len(slot.get_components()) == 1:
                     population_sprite = Sprite('population white.png',
-                                               position = slot_position,
                                                color = color_convert(color_name),
-                                               scale = 0.22)
-                    hex_layer.add(population_sprite, z = 3)
+                                               position = (2, 2),
+                                               scale = 0.9)
+                    slot_sprite.add(population_sprite)
                 
         # vp
         vp = sector.victory_points
@@ -408,9 +481,10 @@ class GalaxyBoardLayer(ScrollableLayer):
         
         # Selectable sprite
         if coord in self.hex_layer:
-            for child in self.hex_layer[coord].get_children():            
+            hex_layer = self.hex_layer[coord]
+            for child in hex_layer.get_children():            
                 if isinstance(child, SelectableSprite):
-                    if child.get_AABB().contains(x, y):
+                    if child.get_AABB().contains(x - hex_layer.x, y - hex_layer.y):
                         if isinstance(child.obj, ResourceSlot) and button == RIGHT and len(sector.get_components(InfluenceDisc)):                        
                             # if it is a wild resource slot, then ask the player which material it is
                             if child.obj.resource_type is None:
@@ -429,15 +503,14 @@ class GalaxyBoardLayer(ScrollableLayer):
                                 self.game.move(player.personal_board.population_track, child.obj, resource_type = child.obj.resource_type)
                                 color = color_convert(player.color)
                                 population_sprite = Sprite('population white.png',
-                                                           position = child.position,
+                                                           position = (2, 2),
                                                            color = color,
-                                                           scale = 0.2
-                                                           )
-                                child.add(population_sprite, 1)
+                                                           scale = 0.9)
+                                child.add(population_sprite, z = 3)
                             return EVENT_HANDLED
                         
                         elif isinstance(child.obj, Ship):
-                            self.hud_layer.update_fleet([child.obj])
+                            self.hud_layer.update_fleet(sector.get_components(component_type = Ship))
                         
 
         elif sector is not None:
@@ -518,7 +591,6 @@ class PlayerBoardLayer(Layer):
         super(PlayerBoardLayer, self).__init__()
         self.player = player
         self.color = color_convert(self.player.color)
-        self.add(Label('PlayerBoardLayer'))
         width, height = director.get_window_size()
         position = (width / 2, height / 2)
         player_board_sprite = BackgroundSprite(str(player.faction.board),
@@ -722,13 +794,18 @@ class HudLayer(Layer):
         self.schedule_interval(self.update_time, .1)
         
         # fleet manager
-        self.fleet_manager_frame = AnchorSprite('fleet_manager.png', scale = 0.5 * self.scale_hud, anchor = (1.0, 1.0))
-        self.fleet_manager_frame.position = director.get_window_size()
-        self.add(self.fleet_manager_frame)
+        fleet_manager = pyglet.resource.image('fleet_manager.png')
+        frame = AnchorSprite(fleet_manager, scale = 0.5 * self.scale_hud,
+                             anchor = (1.0, 1.0),
+                             position = director.get_window_size())
+        self.fleet_manager_frame = frame
+        self.add(frame)
 
-
-        self.sub_layer = Layer()
+        self.sub_layer = FlowLayoutLayer(left = 20, right = fleet_manager.width * 0.8, text_color = self.base_color)
+        self.sub_layer.position = (-frame.width / frame.scale, -frame.height * 0.11 / frame.scale)
         self.fleet_manager_frame.add(self.sub_layer)
+        
+        self.ship_icons = { }
         
         # kick off first turn
         self.main_screen.set_state('action phase')
@@ -739,46 +816,44 @@ class HudLayer(Layer):
         self.action_board.position = (rhs + virtual_offset_x, -virtual_offset_y)
         self.turn_button.position = (-virtual_offset_x, -virtual_offset_y)
         self.influence_layer.position = (rhs + virtual_offset_x, self.action_board.get_height() - virtual_offset_y)
-        
+
+    def add_ship_system_info(self, stat_name, ship_stats):
+        if True:
+            scale = 0.4 if stat_name == 'initiative' else 0.9
+            numbered = stat_name + '_' + str(ship_stats[stat_name])
+            if numbered not in self.ship_icons:
+                try:
+                    pyglet.resource.image('ship_stats/' + numbered + '.png')
+                    self.ship_icons[numbered] = True
+                except:
+                    self.ship_icons[numbered] = False
+            if self.ship_icons[numbered]:
+                self.sub_layer.add_image('ship_stats/' + numbered + '.png',
+                                             scale = scale)
+            else:
+                for dummy in xrange(ship_stats[stat_name]):
+                    self.sub_layer.add_image('ship_stats/' + stat_name + '.png',
+                                             scale = scale)
+        elif ship_stats[stat_name] != 0:
+            self.sub_layer.add_space_to(350)
+            self.sub_layer.add_text(stat_name + ': ' + str(ship_stats[stat_name]), font_size = 40)
+
     def update_fleet(self, ships):
-        # refresh the frame
-        for child in self.sub_layer.get_children():
-            child.kill()
-        
+        self.sub_layer.clear()
         # get all the owners
         owners = set([ship.owner for ship in ships])
-        for owner in owners:        
+        for owner in owners:
             ship_names = set([ship.name for ship in ships if ship.owner is owner])
-            for n, ship_name in enumerate(ship_names):               
-            
-                scale = 0.7
-                fleet_manager_size = (919, 1252)
-                y_pos = -250 - 300 * n
-                ship_sprite = Sprite(ship_name + '.png',
-                                     (-fleet_manager_size[0] + 200, y_pos),
-                                     scale = scale,
-                                     color = color_convert(owner.color))   
-                
-                self.sub_layer.add(ship_sprite)
-                """
-                ship_parts = owner.personal_board.blueprints.get_ship_parts(ship_name)
-                for m, ship_part in enumerate(ship_parts):
-                    ship_part_sprite = Sprite(ship_part.name + '.png', (-fleet_manager_size[0] + 500 + 100 * m, y_pos), scale = 0.8)
-                    self.fleet_manager_frame.add(ship_part_sprite)
-                """
-                
+            for ship_name in ship_names:               
+                self.sub_layer.add_image(ship_name + '.png',
+                                         scale = 0.7,
+                                         color = color_convert(owner.color))
+                self.sub_layer.add_space(20)
                 ship_stats = owner.personal_board.blueprints.get_stats(ship_name)
-                non_weapon_stats = ['initiative', 'movement', 'hull', 'computer', 'shield']
-                for m, stat_name in enumerate(non_weapon_stats):
-                    label_stat = Label('',
-                                      (-fleet_manager_size[0] + 400, y_pos + 60 - 40 * m),
-                                      font_name = 'Estrogen',
-                                      font_size = 30,
-                                      color = self.base_color,
-                                      width = 1000,
-                                      multiline = True)
-                    self.sub_layer.add(label_stat)
-                    label_stat.do(InfoAction(stat_name + ' : ' + str(ship_stats[stat_name]), '', 0.4))
+                stats = ['initiative', 'movement', 'hull', 'computer', 'shield', 'cannon1', 'cannon2', 'cannon4']
+                for stat_name in stats:
+                    self.add_ship_system_info(stat_name, ship_stats)
+                self.sub_layer.new_line(True, vspace = 30)
 
     def update_time(self, dt):
         new_color = [0, random.randint(230, 255), 0, 255]       
@@ -788,6 +863,15 @@ class HudLayer(Layer):
         
     def set_info(self, text):
         self.info.do(InfoAction(text, '_', 0.4))
+
+    def clear(self):
+        self.sub_layer.clear()
+
+    def add_flow_image(self, image, **kwargs):
+        self.sub_layer.add_image(image, **kwargs)
+        
+    def add_flow_text(self, text, **kwargs):
+        self.sub_layer.add_text(text, **kwargs)
         
     def get_influence_disc_drop_target(self):
         if self.main_screen.player_action is None:
@@ -897,7 +981,7 @@ class ActionBoardLayer(Layer):
             self.action_sprites[action].visible = False
         for action in current_player.faction.actions:
             if action not in self.action_sprites:
-                image = 'image/boards/action_' + action + '.png'
+                image = 'action_' + action + '.png'
                 sprite = AnchorSprite(image, anchor = (1.0, 0), scale = self.action_board_blank.scale)
                 self.add(sprite)
                 self.action_sprites[action] = sprite
@@ -1143,6 +1227,8 @@ class MainScreen(Layer):
             print 'player has passed'
             # TODO see if they're now 1st player or if the action phase is done
             # TODO these checks should be done in the game code - pass parameter to end_turn indicating if they're done anything?
+        if self.current_gui_action is not None:
+            self.current_gui_action.on_end()
         self.game.end_turn()
         self.action_ui_count = 0
         self.action_state = {}
