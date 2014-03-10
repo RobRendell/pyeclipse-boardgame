@@ -115,16 +115,36 @@ class SelectFromHexGuiAction(GuiAction):
 class RotateRejectGuiAction(GuiAction):
     def on_start(self):
         coord = self.main_screen.action_state[Explore1.selected_key]
+        self.add_reject_option(coord, 'cross.png', self.click_discard, 'Discard drawn hex')
+
+    def click_discard(self, sprite):
+        coord = self.main_screen.action_state[Explore1.selected_key]
+        self.game.discard_hex(coord)
+        self.add_reject_option(coord, 'tick.png', self.click_replace, 'Replace drawn hex')
+        
+    def click_replace(self, sprite):
+        coord = self.main_screen.action_state[Explore1.selected_key]
+        self.game.replace_hex(coord)
+        self.add_reject_option(coord, 'cross.png', self.click_discard, 'Discard drawn hex')
+
+    def add_reject_option(self, coord, image, callback, text):
         self.main_screen.board_scene.board_layer.display_sector(coord)
+        self.main_screen.board_scene.hud_layer.clear()
+        self.main_screen.board_scene.hud_layer.add_flow_image(image, callback = callback, scale = 3.0)
+        self.main_screen.board_scene.hud_layer.add_flow_text(text)
 
     def is_finished(self):
+        selected = self.main_screen.action_state[Explore1.selected_key]
+        sector = self.game.board.get_components(selected, Sector)
+        if sector is not None and len(sector.get_components(component_type = InfluenceDisc)) > 0:
+            self.main_screen.board_scene.hud_layer.clear()
         return False
     
     def on_hex_mouse_click(self, coords, button, modifiers):
         action_state = self.main_screen.action_state
         if button == LEFT and coords == action_state[Explore1.selected_key]:
-            if not self.main_screen.board_scene.board_layer.is_hex_rotating(coords):
-                sector = self.game.board.get_components(coords)[0]
+            sector = self.game.board.get_components(coords, Sector)
+            if sector is not None and not self.main_screen.board_scene.board_layer.is_hex_rotating(coords):
                 sector.rotate()
                 rotate = 1
                 while not self.game.board.has_wormhole_connection(action_state[Explore1.from_hex_key][0], coords, self.game.current_player):

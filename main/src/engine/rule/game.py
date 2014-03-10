@@ -9,6 +9,7 @@ import material.shipparts as sp
 import material.technologytiles as tt
 import material.factions as fa
 from engine.zone import Sector
+from engine.component import InfluenceDisc
 
 __author__="jglouis"
 __date__ ="$Dec 22, 2011 5:56:29 PM$"
@@ -153,26 +154,38 @@ class Game(object):
             ring += 1
         return ring
             
-            
+    def get_draw_pile(self, coord):
+        draw_pile_number = self.get_coord_ring(coord)
+        draw_pile = [self.inner_sectors_drawpile,
+                     self.middle_sectors_drawpile,
+                     self.outer_sectors_drawpile
+                     ][draw_pile_number - 1]
+        return draw_pile
         
     def draw_hex(self, coord):
         """
         Method called when a player is exploring. Return a SectorTile object
         from the draw pile corresponding to the coordinates. Return None
         if the draw pile was empty."""
-        draw_pile_number = self.get_coord_ring(coord)
-
-        draw_pile = [self.inner_sectors_drawpile,
-                     self.middle_sectors_drawpile,
-                     self.outer_sectors_drawpile
-                     ][draw_pile_number - 1]
+        draw_pile = self.get_draw_pile(coord)
         return draw_pile.draw()
     
     def place_hex(self, sector_tile, coord):
         """
         Place a SectorTile on the board.
         """
-        return self.board.add(coord, sector_tile)   
+        return self.board.add(coord, sector_tile)
+
+    def discard_hex(self, coord):
+        sector = self.board.get_components(coord, component_type = Sector)
+        del(self.board.hex_grid[coord]) # TODO
+        draw_pile = self.get_draw_pile(coord)
+        draw_pile.discard_pile.add(sector)
+        
+    def replace_hex(self, coord):
+        draw_pile = self.get_draw_pile(coord)
+        sector = draw_pile.discard_pile.pop()
+        self.place_hex(sector, coord)
         
     def rotate_hex(self, coord, amount = 1):
         sector = self.board.get_components(coord, Sector)

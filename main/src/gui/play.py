@@ -176,6 +176,7 @@ class FlowLayoutLayer(Layer):
     def clear(self):
         for child in self.get_children():
             child.kill()
+        self.click_targets = {}
         self.left_box = []
         self.cursor = [self.left_margin, -self.top_margin]
     
@@ -187,10 +188,12 @@ class FlowLayoutLayer(Layer):
             self.new_line()
         self.add_box(position - self.cursor[0], 0)
 
-    def add_image(self, image, **kwargs):
+    def add_image(self, image, callback = None, **kwargs):
         sprite = AnchorSprite(image, anchor = (0.,1.), **kwargs)
         sprite.position = self.add_box(sprite.width, sprite.height)
         self.add(sprite)
+        if callback is not None:
+            self.click_targets[sprite] = callback
 
     def add_box(self, width, height):
         if width > self.right_margin - self.left_margin:
@@ -234,6 +237,11 @@ class FlowLayoutLayer(Layer):
             label.do(InfoAction(text, '', 0.4))
             label.element.text = ''
         self.add(label)
+    
+    def on_mouse_press(self, x, y):
+        for sprite in self.click_targets:
+            if sprite.contains(x, y):
+                self.click_targets[sprite](sprite)
 
 class PopulationChoiceMenu(Menu):
     def __init__(self, game, board_layer, resource_slot_sprite, player):
@@ -344,7 +352,12 @@ class GalaxyBoardLayer(ScrollableLayer):
                 frame.do(rotate)
 
     def display_sector(self, coord):
-        sector = self.game.board.get_components()[coord]
+        sector = self.game.board.get_components(coord, Sector)
+        if sector is None:
+            if coord in self.hex_layer:
+                self.hex_layer[coord].kill()
+                del(self.hex_layer[coord])
+            return
         try:
             color_name = sector.get_components(InfluenceDisc)[0].color
         except:
@@ -884,6 +897,8 @@ class HudLayer(Layer):
         if self.turn_button.contains(x, y):
             self.end_turn()
             return EVENT_HANDLED
+        elif self.fleet_manager_frame.contains(x, y):
+            self.sub_layer.on_mouse_press(x, y)
         elif self.influence_layer.click_current_disc(x, y, self.current_player):
             target = self.get_influence_disc_drop_target()
             if target is not None:

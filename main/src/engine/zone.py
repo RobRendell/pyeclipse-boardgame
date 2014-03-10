@@ -74,27 +74,30 @@ class Board(Zone):
                 sector.add(ResourceSlot())
             #rotate the sector
             sector.rotate(rotation)
+        elif isinstance(component, Sector):
+            self.hex_grid[coord] = component
+            sector = component
         else:
             self.hex_grid[coord].add(component)
-            sector = component
+            sector = self.hex_grid[coord]
         return sector
 
-    def get_components(self, coord = None, comp_type = None):
+    def get_components(self, coord = None, component_type = None):
         """
         If coord is not given, then it returns the whole board dictionary.
         If coord is given, then it returns the content of the corresponding hex.
         The first item of the list is always the sector itself.
         """
         if coord is None:
-            if comp_type is None:
+            if component_type is None:
                 return self.hex_grid
-            return dict([(coord, sector.get_components(comp_type)) for coord,sector in self.hex_grid.iteritems()])
+            return dict([(coord, sector.get_components(component_type)) for coord,sector in self.hex_grid.iteritems()])
         if coord not in self.hex_grid:
             return None
-        if comp_type is Sector:
+        if component_type is Sector:
             return self.hex_grid[coord]
-        if comp_type is not None:
-            return self.hex_grid[coord].get_components(comp_type)
+        if component_type is not None:
+            return self.hex_grid[coord].get_components(component_type)
         return [self.hex_grid[coord]] + self.hex_grid[coord].get_components()
 
     def get_coords_owned_by(self, player):
@@ -264,6 +267,9 @@ class DiscardPile(Zone):
     def add(self, item):
         """Add an item in the discard pile."""
         self.content.append(item)
+        
+    def pop(self):
+        return self.content.pop()
 
 class Bag(Zone):
     def __init__(self, components):
