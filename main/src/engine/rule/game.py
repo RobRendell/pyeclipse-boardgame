@@ -9,7 +9,6 @@ import material.shipparts as sp
 import material.technologytiles as tt
 import material.factions as fa
 from engine.zone import Sector
-from engine.component import InfluenceDisc
 
 __author__="jglouis"
 __date__ ="$Dec 22, 2011 5:56:29 PM$"

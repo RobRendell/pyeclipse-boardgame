@@ -1,6 +1,7 @@
 import unittest
-from gui.play import FlowLayoutLayer
+from gui.play import FlowLayoutLayer, HudLayer
 import mock
+from mock import call
 
 class TestFlowLayoutLayer(unittest.TestCase):
     
@@ -104,3 +105,29 @@ class TestFlowLayoutLayer(unittest.TestCase):
         self.assertEqual(-57, self.layer.cursor[1])
         self.assertEqual(0, len(self.layer.left_box))
         self.assertEqual(0, len(self.layer.left_box))
+
+class TestHudLayer(unittest.TestCase):
+    
+    @mock.patch('gui.play.MainScreen')
+    @mock.patch('engine.rule.game.Game')
+    @mock.patch('gui.play.FlowLayoutLayer')
+    @mock.patch('cocos.cocosnode.Camera')
+    @mock.patch('cocos.layer.base_layers.director')
+    @mock.patch('gui.play.director')
+    def setUp(self, director, base_layers_director, camera, flow_layer, game, main_screen):
+        director.get_window_size.return_value = (640, 480)
+        base_layers_director.get_window_size.return_value = (640, 480)
+        self.hud = HudLayer(game, main_screen)
+        
+    def test_draw_ship_system_info_will_add_single_image_if_unknown(self):
+        self.hud.draw_ship_system_info('fnord', { 'fnord': 1 })
+        self.hud.sub_layer.add_image.assert_called_with('ship_stats/fnord.png', scale = 0.9)
+
+    def test_draw_ship_system_info_will_add_numbered_image_if_known_numbered(self):
+        self.hud.draw_ship_system_info('computer', { 'computer': 4 })
+        self.hud.sub_layer.add_image.assert_called_with('ship_stats/computer_4.png', scale = 0.9)
+
+    def test_draw_ship_system_info_will_add_several_numbered_image_if_known_numbered_and_more_than_max(self):
+        self.hud.draw_ship_system_info('computer', { 'computer': 7 })
+        self.hud.sub_layer.add_image.assert_has_calls([ call('ship_stats/computer_5.png', scale = 0.9),
+                                                      call('ship_stats/computer_2.png', scale = 0.9) ])

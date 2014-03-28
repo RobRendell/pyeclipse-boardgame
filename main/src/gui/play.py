@@ -817,12 +817,12 @@ class HudLayer(Layer):
         self.sub_layer = FlowLayoutLayer(left = 20, right = fleet_manager.width * 0.8, text_color = self.base_color)
         self.sub_layer.position = (-frame.width / frame.scale, -frame.height * 0.11 / frame.scale)
         self.fleet_manager_frame.add(self.sub_layer)
-        
-        self.ship_icons = { }
+
+        self.ship_system_icons = { }
         
         # kick off first turn
         self.main_screen.set_state('action phase')
-        
+    
     def do_resize(self, virtual_offset_x, virtual_offset_y):
         rhs, top = director.get_window_size()
         self.fleet_manager_frame.position = (rhs + virtual_offset_x, top + virtual_offset_y)
@@ -830,22 +830,34 @@ class HudLayer(Layer):
         self.turn_button.position = (-virtual_offset_x, -virtual_offset_y)
         self.influence_layer.position = (rhs + virtual_offset_x, self.action_board.get_height() - virtual_offset_y)
 
-    def add_ship_system_info(self, stat_name, ship_stats):
+    def init_ship_system_icons(self, system_name):
+        if system_name not in self.ship_system_icons:
+            count = 1
+            try:
+                while True:
+                    pyglet.resource.image('ship_stats/%s_%d.png' % (system_name, count))
+                    count += 1
+            except:
+                self.ship_system_icons[system_name] = count - 1
+            
+
+    def draw_ship_system_info(self, stat_name, ship_stats):
         if True:
             scale = 0.4 if stat_name == 'initiative' else 0.9
-            numbered = stat_name + '_' + str(ship_stats[stat_name])
-            if numbered not in self.ship_icons:
-                try:
-                    pyglet.resource.image('ship_stats/' + numbered + '.png')
-                    self.ship_icons[numbered] = True
-                except:
-                    self.ship_icons[numbered] = False
-            if self.ship_icons[numbered]:
-                self.sub_layer.add_image('ship_stats/' + numbered + '.png',
-                                             scale = scale)
+            self.init_ship_system_icons(stat_name)
+            icon_max = self.ship_system_icons[stat_name]
+            if icon_max > 0:
+                count = ship_stats[stat_name]
+                while count > icon_max:
+                    self.sub_layer.add_image('ship_stats/%s_%d.png' % (stat_name, icon_max),
+                                                 scale = scale)
+                    count -= icon_max
+                if count > 0:
+                    self.sub_layer.add_image('ship_stats/%s_%d.png' % (stat_name, count),
+                                                 scale = scale)
             else:
                 for dummy in xrange(ship_stats[stat_name]):
-                    self.sub_layer.add_image('ship_stats/' + stat_name + '.png',
+                    self.sub_layer.add_image('ship_stats/%s.png' % (stat_name,),
                                              scale = scale)
         elif ship_stats[stat_name] != 0:
             self.sub_layer.add_space_to(350)
@@ -863,9 +875,9 @@ class HudLayer(Layer):
                                          color = color_convert(owner.color))
                 self.sub_layer.add_space(20)
                 ship_stats = owner.personal_board.blueprints.get_stats(ship_name)
-                stats = ['initiative', 'movement', 'hull', 'computer', 'shield', 'cannon1', 'cannon2', 'cannon4']
+                stats = ['initiative', 'movement', 'hull', 'missile2', 'computer', 'shield', 'cannon1', 'cannon2', 'cannon4']
                 for stat_name in stats:
-                    self.add_ship_system_info(stat_name, ship_stats)
+                    self.draw_ship_system_info(stat_name, ship_stats)
                 self.sub_layer.new_line(True, vspace = 30)
 
     def update_time(self, dt):
